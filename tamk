@@ -1,0 +1,9 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# TAMK Runner para Termux
+# Script simples para executar TAMK no Termux
+
+# Detectar caminho do script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Executar com Python
+python3 "$SCRIPT_DIR/src/main.py" "$@"

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F0F2F5">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <View
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:background="#6200EE"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:id="@+id/txt_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="{{NAME}}"
+            android:textSize="32sp"
+            android:textColor="#1A1A1A"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/txt_version"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1.0.0"
+            android:textColor="#757575"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/btn_main"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginTop="40dp"
+            android:text="INICIAR PROJETO"
+            android:textAllCaps="true"
+            android:textStyle="bold"
+            android:backgroundTint="#6200EE"
+            android:textColor="#FFFFFF"
+            android:onClick="onButtonClick" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Desenvolvido por {{AUTHOR}}"
+            android:textColor="#9E9E9E"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+</RelativeLayout>

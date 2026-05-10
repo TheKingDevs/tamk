@@ -1,0 +1,20 @@
+.si.json
+.env
+__pycache__/
+.vscode
+tem-que-fazer.md
+tutorial-adb.md
+.claude
+.claude/*
+.qwen
+
+# Build artifacts (gerados automaticamente - não commitar)
+build/
+.pyarmor/
+*.spec
+dist/obfuscated/
+dist/pack_out/
+dist/pack_test/
+dist/_tamk/
+dist/launcher.py
+tamk_proprietary/
