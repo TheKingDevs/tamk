@@ -1,20 +1,47 @@
-.si.json
-.env
-__pycache__/
-.vscode
-tem-que-fazer.md
-tutorial-adb.md
-.claude
-.claude/*
-.qwen
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
-# Build artifacts (gerados automaticamente - não commitar)
+# Test binary, built with `go test -c`
+*.test
+
+# Output of go coverage
+*.out
+coverage.html
+coverage.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# TAMK project-specific
+development/
+assets/cache/
+secret/
+env/
+__pycache__/
+*.pyc
+dump.md
+dump.sh
+setup_ofuscado.py
+pyarmor.cfg
+build.py
+venv/
+*.egg-info/
+dist/
 build/
-.pyarmor/
-*.spec
-dist/obfuscated/
-dist/pack_out/
-dist/pack_test/
-dist/_tamk/
-dist/launcher.py
-tamk_proprietary/
+
+# Temp
+tmp/
+temp/

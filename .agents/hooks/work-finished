@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# T.A.M.K Work-Finished Hook
+# Notifies the user when an agent task completes
+
+if command -v termux-vibrate &>/dev/null; then
+    termux-vibrate -f -d 2000
+elif command -v notify-send &>/dev/null; then
+    notify-send "T.A.M.K" "Task completed successfully"
+elif command -v osascript &>/dev/null; then
+    osascript -e 'display notification "Task completed" with title "T.A.M.K"'
+fi

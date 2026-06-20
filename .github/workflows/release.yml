@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Build
+        run: go build -o tamk ./cmd/tamk
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tamk
+          generate_release_notes: true
