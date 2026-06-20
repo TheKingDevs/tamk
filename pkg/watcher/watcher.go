@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Shadw-Developer/tamk/pkg/logger"
+	"github.com/TheKingDevs/tamk/pkg/logger"
 	"github.com/fsnotify/fsnotify"
 )
 

@@ -8,7 +8,7 @@
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Shadw-Developer/tamk.git
+git clone https://github.com/TheKingDevs/tamk.git
 cd tamk
 
 # 2. Build the Go binary

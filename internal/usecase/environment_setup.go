@@ -9,8 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/Shadw-Developer/tamk/internal/config"
-	"github.com/Shadw-Developer/tamk/pkg/logger"
+	"github.com/TheKingDevs/tamk/internal/config"
+	"github.com/TheKingDevs/tamk/pkg/logger"
 )
 
 type SetupEnvironmentUseCase struct {

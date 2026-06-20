@@ -3,7 +3,7 @@ package usecase
 import (
 	"testing"
 
-	"github.com/Shadw-Developer/tamk/internal/config"
+	"github.com/TheKingDevs/tamk/internal/config"
 )
 
 func TestSetupEnvironmentUseCase_Verify(t *testing.T) {

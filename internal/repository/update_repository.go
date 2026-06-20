@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Shadw-Developer/tamk/internal/config"
-	"github.com/Shadw-Developer/tamk/internal/domain/entity"
+	"github.com/TheKingDevs/tamk/internal/config"
+	"github.com/TheKingDevs/tamk/internal/domain/entity"
 )
 
 const (
-	githubAPI     = "https://api.github.com/repos/Shadw-Developer/tamk/releases"
+	githubAPI     = "https://api.github.com/repos/TheKingDevs/tamk/releases"
 	cacheDuration = 6 * time.Hour
 )
 

@@ -157,7 +157,7 @@ Se encontrar problemas:
 1. Verifique a versão: `tamk version`
 2. Veja os logs: `tamk --verbose --help`
 3. Consulte a documentação: `/opt/tamk/README.md`
-4. Reporte issues em: https://github.com/Shadw-Developer/tamk/issues
+4. Reporte issues em: https://github.com/TheKingDevs/tamk/issues
 
 ---
 

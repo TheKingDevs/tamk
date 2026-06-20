@@ -184,7 +184,7 @@ Se preferir instalar via Homebrew no futuro:
 
 ```bash
 # Adicionar tab (quando disponível)
-brew tap Shadw-Developer/tamk
+brew tap TheKingDevs/tamk
 brew install tamk
 ```
 
@@ -248,7 +248,7 @@ Se encontrar problemas:
 2. Confira a arquitetura: `uname -m` (deve ser `arm64` ou `x86_64`)
 3. Veja permissions: `ls -la /opt/tamk/`
 4. Consulte: `/opt/tamk/README.md`
-5. Reporte issues em: https://github.com/Shadw-Developer/tamk/issues
+5. Reporte issues em: https://github.com/TheKingDevs/tamk/issues
 
 ---
 

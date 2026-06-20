@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Shadw-Developer/tamk/internal/domain/entity"
+	"github.com/TheKingDevs/tamk/internal/domain/entity"
 )
 
 type ProjectRepository struct{}

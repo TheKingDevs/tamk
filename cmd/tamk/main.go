@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/Shadw-Developer/tamk/internal/delivery/cli"
-	"github.com/Shadw-Developer/tamk/pkg/logger"
+	"github.com/TheKingDevs/tamk/internal/delivery/cli"
+	"github.com/TheKingDevs/tamk/pkg/logger"
 )
 
 func main() {

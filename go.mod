@@ -1,4 +1,4 @@
-module github.com/Shadw-Developer/tamk
+module github.com/TheKingDevs/tamk
 
 go 1.26.3
 

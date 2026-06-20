@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Shadw-Developer/tamk/internal/config"
-	"github.com/Shadw-Developer/tamk/internal/domain/entity"
-	"github.com/Shadw-Developer/tamk/internal/domain/repository"
-	"github.com/Shadw-Developer/tamk/pkg/logger"
+	"github.com/TheKingDevs/tamk/internal/config"
+	"github.com/TheKingDevs/tamk/internal/domain/entity"
+	"github.com/TheKingDevs/tamk/internal/domain/repository"
+	"github.com/TheKingDevs/tamk/pkg/logger"
 )
 
 type UpdateUseCase struct {

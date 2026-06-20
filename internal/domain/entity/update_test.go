@@ -23,7 +23,7 @@ func TestUpdateInfo(t *testing.T) {
 		LatestVersion:  "1.1.0",
 		Level:          UpdateLevelMinor,
 		ReleaseNotes:   "Bug fixes and improvements",
-		DownloadURL:    "https://github.com/Shadw-Developer/tamk/releases/v1.1.0",
+		DownloadURL:    "https://github.com/TheKingDevs/tamk/releases/v1.1.0",
 	}
 
 	if info.CurrentVersion != "1.0.0" {

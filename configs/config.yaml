@@ -33,6 +33,6 @@ dev:
   debounce_ms: 500
 
 update:
-  github_repo: "Shadw-Developer/tamk"
+  github_repo: "TheKingDevs/tamk"
   cache_ttl_hours: 6
   auto_install_critical: true

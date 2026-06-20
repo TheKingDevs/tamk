@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/Shadw-Developer/tamk/internal/domain/entity"
+	"github.com/TheKingDevs/tamk/internal/domain/entity"
 )
 
 //go:generate mockgen -source=update_repository.go -destination=mock/update_repository.go -package=mock

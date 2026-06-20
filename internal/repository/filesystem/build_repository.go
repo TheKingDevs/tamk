@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Shadw-Developer/tamk/internal/domain/entity"
-	"github.com/Shadw-Developer/tamk/pkg/errors"
+	"github.com/TheKingDevs/tamk/internal/domain/entity"
+	"github.com/TheKingDevs/tamk/pkg/errors"
 )
 
 type BuildRepository struct{}

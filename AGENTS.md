@@ -509,7 +509,7 @@ delivery/cli/  (wires dependencies, handles CLI input)
 ### Update Methods (auto-detected)
 
 1. **git**: `git pull --rebase --autostash` in TAMK_HOME
-2. **go install**: `go install github.com/Shadw-Developer/tamk/cmd/tamk@latest`
+2. **go install**: `go install github.com/TheKingDevs/tamk/cmd/tamk@latest`
 
 ---
 

@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Shadw-Developer/tamk/internal/config"
-	"github.com/Shadw-Developer/tamk/internal/domain/entity"
-	repoFS "github.com/Shadw-Developer/tamk/internal/repository/filesystem"
+	"github.com/TheKingDevs/tamk/internal/config"
+	"github.com/TheKingDevs/tamk/internal/domain/entity"
+	repoFS "github.com/TheKingDevs/tamk/internal/repository/filesystem"
 )
 
 func TestCreateProjectUseCase_ConsoleProject(t *testing.T) {

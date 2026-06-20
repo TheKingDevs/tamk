@@ -178,7 +178,7 @@ show_done() {
 	echo -e "    ${GREEN}tamk dev${NC}       — HMR dev mode"
 	echo -e "    ${GREEN}tamk help${NC}      — All commands"
 	echo ""
-	echo -e "  ${CYAN}https://github.com/Shadw-Developer/tamk${NC}"
+	echo -e "  ${CYAN}https://github.com/TheKingDevs/tamk${NC}"
 	echo ""
 }
 

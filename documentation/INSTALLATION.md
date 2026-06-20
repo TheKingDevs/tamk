@@ -46,7 +46,7 @@ tamk version
 
 ```bash
 pkg install -y golang git openjdk-21 kotlin wget zip apksigner aapt2
-git clone https://github.com/Shadw-Developer/tamk.git
+git clone https://github.com/TheKingDevs/tamk.git
 cd tamk
 go build -o bin/tamk ./cmd/tamk
 export PATH="$HOME/tamk/bin:$PATH"

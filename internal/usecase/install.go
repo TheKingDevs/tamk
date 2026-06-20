@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Shadw-Developer/tamk/pkg/logger"
-	"github.com/Shadw-Developer/tamk/pkg/qrcode"
+	"github.com/TheKingDevs/tamk/pkg/logger"
+	"github.com/TheKingDevs/tamk/pkg/qrcode"
 )
 
 type InstallOutput struct {

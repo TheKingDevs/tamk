@@ -5,7 +5,7 @@ BIN_DIR = bin
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git log -1 --format=%h 2>/dev/null || echo "unknown")
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS = -ldflags="-X 'github.com/Shadw-Developer/tamk/config.Version=$(VERSION)' -X 'github.com/Shadw-Developer/tamk/config.Commit=$(COMMIT)' -X 'github.com/Shadw-Developer/tamk/config.Date=$(DATE)'"
+LDFLAGS = -ldflags="-X 'github.com/TheKingDevs/tamk/config.Version=$(VERSION)' -X 'github.com/TheKingDevs/tamk/config.Commit=$(COMMIT)' -X 'github.com/TheKingDevs/tamk/config.Date=$(DATE)'"
 
 build:
 	go build $(LDFLAGS) -o $(BIN_DIR)/$(APP_NAME) ./cmd/$(APP_NAME)

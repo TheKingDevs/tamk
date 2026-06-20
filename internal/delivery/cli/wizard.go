@@ -9,10 +9,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Shadw-Developer/tamk/internal/config"
-	"github.com/Shadw-Developer/tamk/internal/domain/entity"
-	"github.com/Shadw-Developer/tamk/internal/domain/valueobject"
-	"github.com/Shadw-Developer/tamk/internal/usecase"
+	"github.com/TheKingDevs/tamk/internal/config"
+	"github.com/TheKingDevs/tamk/internal/domain/entity"
+	"github.com/TheKingDevs/tamk/internal/domain/valueobject"
+	"github.com/TheKingDevs/tamk/internal/usecase"
 )
 
 var stdinReader = bufio.NewReader(os.Stdin)

@@ -27,14 +27,14 @@ pkg install nano vim
 **Opção A: Clonar do GitHub**
 ```bash
 cd ~
-git clone https://github.com/Shadw-Developer/tamk.git
+git clone https://github.com/TheKingDevs/tamk.git
 cd tamk
 ```
 
 **Opção B: Descarregar do ZIP**
 ```bash
 cd ~
-wget https://github.com/Shadw-Developer/tamk/archive/refs/heads/main.zip
+wget https://github.com/TheKingDevs/tamk/archive/refs/heads/main.zip
 unzip main.zip
 cd tamk-main
 ```
@@ -193,7 +193,7 @@ tamk setup
 
 ```bash
 # Use shallow clone
-git clone --depth 1 https://github.com/Shadw-Developer/tamk.git
+git clone --depth 1 https://github.com/TheKingDevs/tamk.git
 ```
 
 ## 💡 Dicas para Termux
@@ -290,7 +290,7 @@ export PATH="$HOME/tamk/bin:$PATH"
 ## 📞 Suporte
 
 - Termux issues: https://github.com/termux/termux-app/issues
-- TAMK issues: https://github.com/Shadw-Developer/tamk/issues
+- TAMK issues: https://github.com/TheKingDevs/tamk/issues
 
 ---
 

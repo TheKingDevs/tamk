@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/Shadw-Developer/tamk/internal/domain/entity"
+	"github.com/TheKingDevs/tamk/internal/domain/entity"
 )
 
 type TemplateRepository interface {

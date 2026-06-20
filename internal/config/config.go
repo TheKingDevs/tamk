@@ -139,9 +139,11 @@ func (c *Config) GetTemplateDir(projectType string) string {
 		return cached.(string)
 	}
 
+	cwd, _ := os.Getwd()
 	candidates := []string{
 		filepath.Join(c.TAMKHome, "assets", "templates", projectType),
 		filepath.Join(c.TAMKHome, "src", "templates", projectType),
+		filepath.Join(cwd, "assets", "templates", projectType),
 	}
 
 	for _, dir := range candidates {

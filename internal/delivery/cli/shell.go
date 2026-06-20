@@ -12,11 +12,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/Shadw-Developer/tamk/internal/config"
-	repoFS "github.com/Shadw-Developer/tamk/internal/repository/filesystem"
-	"github.com/Shadw-Developer/tamk/internal/usecase"
-	"github.com/Shadw-Developer/tamk/pkg/errors"
-	"github.com/Shadw-Developer/tamk/pkg/logger"
+	"github.com/TheKingDevs/tamk/internal/config"
+	repoFS "github.com/TheKingDevs/tamk/internal/repository/filesystem"
+	"github.com/TheKingDevs/tamk/internal/usecase"
+	"github.com/TheKingDevs/tamk/pkg/errors"
+	"github.com/TheKingDevs/tamk/pkg/logger"
 )
 
 type shellState struct {

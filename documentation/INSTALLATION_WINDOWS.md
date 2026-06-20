@@ -214,7 +214,7 @@ Se encontrar problemas:
 2. Use PowerShell em vez de Command Prompt
 3. Execute como Administrador
 4. Consulte: `C:\Program Files\TAMK\README.md`
-5. Reporte issues em: https://github.com/Shadw-Developer/tamk/issues
+5. Reporte issues em: https://github.com/TheKingDevs/tamk/issues
 
 ---
 
