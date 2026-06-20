@@ -1,6 +1,6 @@
 # 📄 Templates Completos para WebApp
 
-Código-fonte completo de todos os templates em `assets/templates/webapp/`.
+Código-fonte completo de todos os templates em `templates/webapp/`.
 
 ---
 

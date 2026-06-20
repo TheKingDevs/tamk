@@ -28,8 +28,8 @@ Sistema de atualizações automáticas com níveis de prioridade.
 
 1. **Versão semântica**: Compara major.minor.patch
 2. **Palavras-chave nas notas de release**:
-   - `critical`, `security`, `urgent`, `importante`, `obrigatória` → CRITICAL
-   - `patch`, `bugfix`, `correção`, `fix`, `hotfix` → PATCH
+   - `critical`, `security`, `urgent` → CRITICAL
+   - `patch`, `bugfix`, `fix` → PATCH
    - Mudança major → MAJOR
    - Mudança minor → MINOR
 

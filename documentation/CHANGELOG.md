@@ -14,7 +14,7 @@ All notable changes. Format based on [Keep a Changelog](https://keepachangelog.c
   - JSON real-time data update
   - WebSocket server (port 8765) + HTTP fallback (port 8080)
   - File watcher (fsnotify) with 500ms debounce
-  - Incremental asset build (`BuildAssetsOnly()`)
+  - Incremental asset build (`AssetsOnlyBuild()`)
   - ADB auto-install + asset push + broadcast refresh
   - HMR server with module registry and client state tracking
   - Bridge JS `tamk-dev-bridge.js` automatically injected
@@ -36,12 +36,12 @@ All notable changes. Format based on [Keep a Changelog](https://keepachangelog.c
   - File watcher: watchdog (Python) → fsnotify (Go)
   - Build: `python src/main.py` → `go build ./cmd/tamk`
   - Binary: PyInstaller bundle → native Go binary at `bin/tamk`
-  - Template engine: string replacements → `text/template` wrapper in `pkg/templateengine`
-  - Update checker: standalone Python → `pkg/updater` + `internal/usecase/update.go`
-- **Dev mode**: `onFileChanged()`, `BuildAssetsOnly()`, status command, 1s cooldown
-- **HMR server**: `HandleConnection()` with HMR handshake, `BroadcastHMRUpdate()`, 30s heartbeat
-- **Build pipeline**: `FullBuild()`, `BuildAssetsOnly()` incremental, `PushAssetToDevice()` via ADB
-- **Template system**: `TemplateRepository` loading + `pkg/templateengine` rendering
+  - Template engine: string replacements → `internal/repository/filesystem/template_repository.go`
+  - Update checker: standalone Python → `internal/usecase/update.go` + `internal/repository/update_repository.go`
+- **Dev mode**: `onFileChanged()`, `AssetsOnlyBuild()`, status command, 500ms debounce
+- **HMR server**: Client-side WebSocket bridge (server-side pending)
+- **Build pipeline**: `FullBuild()`, `AssetsOnlyBuild()` incremental, `PushAssetToDevice()` via ADB
+- **Template system**: `TemplateRepository` loading + placeholder rendering
 - **Config**: Environment detection in `internal/config/config.go`, `GetTemplateDir()` multi-path fallback
 - **Dependency injection**: All use cases wired in `root.go` with constructor injection
 

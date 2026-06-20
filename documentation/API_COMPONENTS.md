@@ -79,7 +79,7 @@ func (uc *DevModeUseCase) Stop(ctx context.Context)
 ```go
 type SetupEnvironmentUseCase struct { /* ... */ }
 func NewSetupEnvironmentUseCase(cfg) *SetupEnvironmentUseCase
-func (uc *SetupEnvironmentUseCase) Execute() error
+func (uc *SetupEnvironmentUseCase) Execute(ctx context.Context) error
 ```
 
 | Constant | Value |
@@ -149,30 +149,37 @@ func zipDir(source, target string) error  // Archive helper (zipDir)
 const Version = "2026.3.0-HMR"
 
 type Config struct {
-    Version  string       // "2026.3.0-HMR"
-    Env      Environment  // "termux" | "smartide" | "unknown"
-    TAMKHome string       // Installation root
-    DevDir   string       // development/
-    SDKPath  string       // development/sdk/android.jar
-    Keystore string       // development/secret/debug.keystore
+    Version    string       // "2026.3.0-HMR"
+    Env        Environment  // "termux" | "debian" | "ubuntu" | "arch" | "fedora" | "unknown"
+    EnvType    string       // TAMK_ENV env var
+    TAMKHome   string       // Installation root
+    DevDir     string       // development/
+    SDKPath    string       // development/sdk/android.jar
+    Keystore   string       // development/secret/debug.keystore
+    PkgMgr     string       // Detected package manager
+    ProjectDir string       // Project base directory
 }
 
 func New() *Config
+func ConfigFromEnv() *Config
 func (c *Config) GetTemplateDir(templateType string) string
-func (c *Config) EnsureDirectories() error
+func (c *Config) GetProjectDir(name string) string
+func (c *Config) IsTermux() bool
+func (c *Config) Validate() error
+func (c *Config) DetectPackageName(author, name string) string
 ```
 
 ---
 
 ## 2. Templates
 
-### WebApp (`assets/templates/webapp/`)
+### WebApp (`templates/webapp/`)
 
 | Template | Destination | Purpose |
 | :--- | :--- | :--- |
 | `AndroidManifest.xml.tmpl` | `AndroidManifest.xml` | Permissions, activities, theme |
 | `MainActivity.kt.tmpl` | `src/.../MainActivity.kt` | WebView + BroadcastReceiver |
-| `dev_bridge.js.tmpl` | (injected in dev mode) | HMR WebSocket client |
+| (injected inline) | injected in dev mode | HMR WebSocket client bridge |
 | `index.html.tmpl` | `src/main/assets/index.html` | Landing page (internal) |
 | `css/styles.css.tmpl` | `src/main/assets/css/styles.css` | Global styles (internal) |
 | `js/app.js.tmpl` | `src/main/assets/js/app.js` | Main JS (internal) |
@@ -183,7 +190,7 @@ func (c *Config) EnsureDirectories() error
 | `gitignore_root.tmpl` | `.gitignore` | Project root |
 | `gitignore_assets.tmpl` | `src/main/assets/.gitignore` | Assets (internal) |
 
-### UI APK (`assets/templates/ui_apk/`)
+### UI APK (`templates/ui_apk/`)
 
 | Template | Destination | Purpose |
 | :--- | :--- | :--- |
@@ -194,7 +201,7 @@ func (c *Config) EnsureDirectories() error
 | `styles.xml.tmpl` | `res/values/styles.xml` | Theme |
 | `icon.xml.tmpl` | `res/drawable/ic_launcher*.xml` | Icon |
 
-### Console (`assets/templates/console/`)
+### Console (`templates/console/`)
 
 | Template | Destination | Purpose |
 | :--- | :--- | :--- |

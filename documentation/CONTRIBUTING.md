@@ -37,7 +37,7 @@ Sistema de Arquivos
 
 ### 1. Templates (Prioridade Alta)
 
-Novos layouts em `assets/templates/`:
+Novos layouts em `templates/`:
 - `login_activity.xml.tmpl` + `LoginActivity.kt.tmpl`
 - `settings_activity.xml.tmpl` com PreferenceFragment
 - `compose_activity.tmpl` (Jetpack Compose)

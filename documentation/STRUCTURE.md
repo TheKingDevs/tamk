@@ -80,33 +80,33 @@ tamk/                                    # Project root
 │   └── config.yaml                    # User-facing config sample
 │
 ├── assets/                            # Static resources
-│   ├── images/
-│   │   └── logo.png                   # Project logo
-│   └── templates/                     # Template system (.tmpl)
-│       ├── webapp/                    # WebApp (12 files)
-│       │   ├── AndroidManifest.xml.tmpl
-│       │   ├── MainActivity.kt.tmpl
-│       │   ├── dev_bridge.js.tmpl     # HMR client bridge
-│       │   ├── index.html.tmpl
-│       │   ├── strings.xml.tmpl
-│       │   ├── styles.xml.tmpl
-│       │   ├── icon.xml.tmpl
-│       │   ├── network_security_config.xml.tmpl
-│       │   ├── gitignore_root.tmpl
-│       │   ├── gitignore_assets.tmpl
-│       │   ├── css/
-│       │   │   └── styles.css.tmpl
-│       │   └── js/
-│       │       └── app.js.tmpl
-│       ├── console/                   # Console (1 file)
-│       │   └── Main.kt.tmpl
-│       └── ui_apk/                    # UI APK (6 files)
-│           ├── AndroidManifest.xml.tmpl
-│           ├── MainActivity.kt.tmpl
-│           ├── activity_main.xml.tmpl
-│           ├── strings.xml.tmpl
-│           ├── styles.xml.tmpl
-│           └── icon.xml.tmpl
+│   └── images/
+│       └── logo.png                   # Project logo
+│
+├── templates/                         # Template system (.tmpl)
+│   ├── webapp/                        # WebApp (11 files)
+│   │   ├── AndroidManifest.xml.tmpl
+│   │   ├── MainActivity.kt.tmpl
+│   │   ├── index.html.tmpl
+│   │   ├── strings.xml.tmpl
+│   │   ├── styles.xml.tmpl
+│   │   ├── icon.xml.tmpl
+│   │   ├── network_security_config.xml.tmpl
+│   │   ├── gitignore_root.tmpl
+│   │   ├── gitignore_assets.tmpl
+│   │   ├── css/
+│   │   │   └── styles.css.tmpl
+│   │   └── js/
+│   │       └── app.js.tmpl
+│   ├── console/                       # Console (1 file)
+│   │   └── Main.kt.tmpl
+│   └── ui_apk/                        # UI APK (6 files)
+│       ├── AndroidManifest.xml.tmpl
+│       ├── MainActivity.kt.tmpl
+│       ├── activity_main.xml.tmpl
+│       ├── strings.xml.tmpl
+│       ├── styles.xml.tmpl
+│       └── icon.xml.tmpl
 │
 ├── bin/                               # Compiled binary output
 │   └── tamk                           # Go binary
@@ -159,14 +159,12 @@ MeuWebApp/
 │   ├── values/strings.xml             # Name, version, author
 │   ├── values/styles.xml              # Material theme
 │   ├── drawable/ic_launcher.xml       # Icon
-│   ├── drawable/ic_launcher_round.xml # Rounded icon
 │   └── xml/network_security_config.xml
 ├── src/main/
 │   ├── assets/                        # ⭐ WEB CONTENT
 │   │   ├── index.html                 # Entry point
 │   │   ├── css/styles.css             # Styles
 │   │   ├── js/app.js                  # JavaScript
-│   │   ├── js/tamk-dev-bridge.js      # (dev mode only)
 │   │   └── .gitignore                 # Assets
 │   └── kotlin/com/author/appname/
 │       └── MainActivity.kt            # WebView + HMR bridge
@@ -223,7 +221,7 @@ MeuConsole/
 - **`src/main/assets/`**: Most important folder for WebApps. All content is packaged in the APK and accessible via `file:///android_asset/`.
 - **`.gitignore`**: Root ignores APKs, cache, keystore. `assets/.gitignore` ignores temp files.
 - **Keystore**: `secret/` contains sensitive data. **Never version.**
-- **Dev Mode**: `tamk-dev-bridge.js` is created/removed automatically. `index.html.tamk_backup` preserves edits.
+- **Dev Mode**: Dev bridge JS is injected inline into `index.html`. `index.html.tamk_backup` preserves original.
 - **Build Cache**: `assets/cache/` and `.build_cache` are safe to delete.
 - **Clean Architecture**: The `internal/` package enforces the Dependency Rule — inner layers never import outer layers.
 

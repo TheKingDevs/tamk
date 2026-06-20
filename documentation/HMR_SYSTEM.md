@@ -66,12 +66,14 @@ cd MeuWebApp
 tamk dev
 ```
 
-Comandos disponiveis no modo dev:
+Comandos planejados no modo dev (ainda NAO implementados no codigo Go):
 - `b` — Rebuild forçado
 - `i` — Instalar APK via ADB
 - `s` — Status
 - `h` — Ajuda
 - `q` — Encerrar
+
+> **Nota:** Estes comandos sao apenas planejados. O modo dev atual inicia o FileWatcher e executa `AssetsOnlyBuild()` automaticamente; nao ha REPL interativo.
 
 ### Diferencas do Planejado
 

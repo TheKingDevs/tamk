@@ -12,7 +12,7 @@ Logger baseado em `log/slog` com niveis customizados e cores ANSI.
 - `LevelInfo(0)` — azul
 - `LevelStep(2)` — ciano
 - `LevelSuccess(4)` — verde
-- `LevelWarn(4)` — amarelo (reusa nivel slog)
+- `LevelWarn(-4)` — amarelo (reusa nivel slog)
 - `LevelError(8)` — vermelho
 
 ### Inicializacao

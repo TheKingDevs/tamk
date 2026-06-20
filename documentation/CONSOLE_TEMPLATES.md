@@ -1,6 +1,6 @@
 # 📄 Templates para Console
 
-Templates em `assets/templates/console/`.
+Templates em `templates/console/`.
 
 ---
 

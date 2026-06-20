@@ -171,7 +171,7 @@ sequenceDiagram
 
 | Package | Types | Purpose |
 | :--- | :--- | :--- |
-| `entity/` | `Project`, `ProjectType`, `BuildResult`, `Template`, `Keystore`, `VersionInfo`, `UpdateLevel` | Core domain types, zero external dependencies |
+| `entity/` | `Project`, `ProjectType`, `WebContentMode`, `BuildResult`, `BuildPhase`, `BuildCache`, `Template`, `TemplateMapping`, `Keystore`, `UpdateInfo`, `UpdateLevel` | Core domain types, zero external dependencies |
 | `valueobject/` | `ProjectName`, `Version`, `PackageName` | Immutable value objects with built-in validation |
 | `repository/` | `ProjectRepository`, `BuildRepository`, `TemplateRepository`, `UpdateRepository` | Interface contracts (ports) |
 
@@ -181,10 +181,10 @@ sequenceDiagram
 | :--- | :--- | :--- |
 | `CreateProjectUseCase` | `Execute(input)` | Project creation wizard, template processing |
 | `BuildProjectUseCase` | `FullBuild(ctx, input)`, `AssetsOnlyBuild(ctx, input)` | Full + incremental APK build |
-| `DevModeUseCase` | `Start(ctx, projectPath, password)`, `Stop(ctx)` | HMR dev mode orchestrator |
+| `DevModeUseCase` | `Start(ctx, projectPath, password)`, `Stop(ctx)`, `GetStatus()` | HMR dev mode orchestrator |
 | `SetupEnvironmentUseCase` | `Execute()` | SDK download + keystore generation |
 | `InstallUseCase` | `Serve(ctx, projectPath, port)`, `FindAPK()` | HTTP server + QR code for APK download |
-| `UpdateUseCase` | `Check(ctx)`, `ShouldAutoInstall(info)`, `ShouldPrompt(info)` | GitHub release checks |
+| `UpdateUseCase` | `Check(ctx)`, `ShouldAutoInstall(info)`, `ShouldPrompt(info)`, `PrintUpdateInfo(info)` | GitHub release checks |
 | *(helper)* `zipDir` | `internal/usecase/zip.go` | Archive helper for directory zipping |
 
 ### Repository Layer (`internal/repository/`)
@@ -201,6 +201,8 @@ sequenceDiagram
 | Package | File | Purpose |
 | :--- | :--- | :--- |
 | `cli/` | `root.go` | Cobra root command + subcommand wiring |
+| `cli/` | `wizard.go` | Interactive project creation wizard |
+| `cli/` | `shell.go` | Interactive development REPL |
 
 ---
 
@@ -224,11 +226,11 @@ type Config struct {
 ### Template Resolution
 
 `GetTemplateDir()` searches in order:
-1. `$TAMK_HOME/assets/templates/{type}/`
-2. Source-relative `assets/templates/{type}/`
-3. `cwd/assets/templates/{type}/`
-4. `/data/data/com.termux/files/usr/opt/tamk/assets/templates/{type}/`
-5. `/usr/opt/tamk/assets/templates/{type}/`
+1. `$TAMK_HOME/templates/{type}/`
+2. Source-relative `templates/{type}/`
+3. `cwd/templates/{type}/`
+4. `/data/data/com.termux/files/usr/opt/tamk/templates/{type}/`
+5. `/usr/opt/tamk/templates/{type}/`
 
 ---
 

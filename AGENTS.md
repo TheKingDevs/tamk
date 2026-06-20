@@ -176,7 +176,7 @@ tamk/
 │   ├── repository/
 │   │   ├── filesystem/
 │   │   │   ├── project_repository.go # Project CRUD on disk
-│   │   │   ├── build_repository.go   # Build pipeline (aapt2, kotlinc, d8, etc.)
+│   │   │   ├── build_repository.go   # Build cache, hash calculation, path sanitization
 │   │   │   └── template_repository.go # Template loading + rendering
 │   │   └── update_repository.go      # GitHub API client
 │   └── config/                       # Internal config (config.go, env detection)
@@ -187,11 +187,11 @@ tamk/
 │   ├── errors/errors.go             # Domain error types
 │   ├── watcher/watcher.go           # fsnotify-based FileWatcher
 │   └── qrcode/qrcode.go             # QR code terminal renderer
+├── templates/                       # .tmpl files per project type
+│   ├── webapp/                      # 11 templates + css/ + js/
+│   ├── console/                     # 1 template
+│   └── ui_apk/                      # 6 templates
 ├── assets/
-│   ├── templates/                   # .tmpl files per project type
-│   │   ├── webapp/                  # 11 templates + css/ + js/
-│   │   ├── console/                 # 1 template
-│   │   └── ui_apk/                  # 6 templates
 │   └── images/logo.png
 ├── PRD/                             # Product requirements docs
 ├── documentation/                   # 21 markdown docs + VERSIONING.txt
@@ -286,13 +286,13 @@ MyWebApp/
 
 ## TEMPLATE SYSTEM
 
-### Location: `assets/templates/{type}/`
+### Location: `templates/{type}/`
 
 ### Template Files
 
 | Type | Templates | Placeholders |
 | :--- | :--- | :--- |
-| **webapp** | `AndroidManifest.xml`, `MainActivity.kt`, `index.html`, `strings.xml`, `styles.xml`, `icon.xml`, `network_security_config.xml`, `dev_bridge.js`, `css/styles.css`, `js/app.js`, `gitignore_root`, `gitignore_assets` | `{{NAME}}`, `{{PACKAGE}}`, `{{VERSION}}`, `{{AUTHOR}}`, `{{WEB_URL}}`, `{{DEV_MODE}}`, `{{MIN_SDK}}`, `{{TARGET_SDK}}`, `{{TAMK_VERSION}}`, `{{DEV_PORT}}` |
+| **webapp** | `AndroidManifest.xml`, `MainActivity.kt`, `index.html`, `strings.xml`, `styles.xml`, `icon.xml`, `network_security_config.xml`, `css/styles.css`, `js/app.js`, `gitignore_root`, `gitignore_assets` | `{{NAME}}`, `{{PACKAGE}}`, `{{VERSION}}`, `{{AUTHOR}}`, `{{WEB_URL}}`, `{{DEV_MODE}}`, `{{MIN_SDK}}`, `{{TARGET_SDK}}`, `{{TAMK_VERSION}}`, `{{DEV_PORT}}` |
 | **ui_apk** | `AndroidManifest.xml`, `MainActivity.kt`, `activity_main.xml`, `strings.xml`, `styles.xml`, `icon.xml` | `{{NAME}}`, `{{PACKAGE}}`, `{{VERSION}}`, `{{AUTHOR}}` |
 | **console** | `Main.kt` | `{{NAME}}`, `{{VERSION}}`, `{{AUTHOR}}` |
 
@@ -308,7 +308,7 @@ MyWebApp/
 ### MainActivity.kt.tmpl Key Features (WebApp)
 
 - `BroadcastReceiver` for `tamk.ACTION_REFRESH_ASSET` and `tamk.ACTION_REFRESH_ALL`
-- JavaScript bridge injection via `injectHMRBridge()` after page load
+- JavaScript bridge injection via `injectDevBridge()` after page load
 - `WebViewClient` + `WebChromeClient` with logging
 - `onBackPressed()` for WebView history navigation
 - Error handling with `Toast` notifications
@@ -359,7 +359,7 @@ Used by HMR dev mode for fast iteration:
 4. Repackage and sign → `app-dev.apk`
 5. Auto-install via ADB if device connected
 
-### ADB Push (`DevModeUseCase.PushAssetToDevice()` - stub)
+### ADB Push (`BuildProjectUseCase.PushAssetToDevice()`)
 
 For HTML hot-reload without full rebuild:
 
@@ -386,7 +386,7 @@ For HTML hot-reload without full rebuild:
 DevModeUseCase
 ├── FileWatcher (fsnotify)        — File system monitoring
 │   ├── onFileChanged             — Debounced callback (500ms)
-│   └── Watch extensions: .html, .css, .js, .json, .png, .jpg, .svg, .webp, .xml, .kt
+│   └── Watch extensions: .html, .css, .js, .json, .png, .jpg, .jpeg, .svg, .webp, .xml, .kt
 ├── ADB Bridge                    — Auto-install + push + broadcast
 └── HMR Bridge (inline JS)       — Injected into index.html as WebSocket client
     ├── Connects to ws://localhost:8765
@@ -455,7 +455,7 @@ delivery/cli/  (wires dependencies, handles CLI input)
 
 | Package | Types | Purpose |
 | :--- | :--- | :--- |
-| `entity/` | `Project`, `ProjectType`, `BuildResult`, `Template`, `Keystore`, `VersionInfo`, `UpdateLevel` | Core domain types with no external dependencies |
+| `entity/` | `Project`, `ProjectType`, `WebContentMode`, `BuildResult`, `BuildPhase`, `BuildCache`, `Template`, `TemplateMapping`, `Keystore`, `UpdateInfo`, `UpdateLevel` | Core domain types with no external dependencies |
 | `valueobject/` | `ProjectName`, `Version`, `PackageName`, validation errors | Immutable value objects with built-in validation |
 | `repository/` | `ProjectRepository`, `BuildRepository`, `TemplateRepository`, `UpdateRepository` | Interface contracts (Go interfaces) |
 
@@ -467,8 +467,8 @@ delivery/cli/  (wires dependencies, handles CLI input)
 | `BuildProjectUseCase` | `FullBuild(input)`, `AssetsOnlyBuild(input)` | APK build pipeline + incremental |
 | `DevModeUseCase` | `Start(ctx, projectPath, password)`, `Stop(ctx)`, `GetStatus()` | HMR dev mode orchestrator |
 | `SetupEnvironmentUseCase` | `Execute()` | SDK download + keystore generation |
-| `InstallUseCase` | `Serve(ctx, projectPath, port)`, `findAPK()` | HTTP server + QR code for APK download |
-| `UpdateUseCase` | `Check(ctx)`, `ShouldAutoInstall(info)`, `PrintUpdateInfo(info)` | GitHub release check |
+| `InstallUseCase` | `Serve(ctx, projectPath, port)`, `FindAPK(projectPath)`, `FindAPKs(projectPath)` | HTTP server + QR code for APK download |
+| `UpdateUseCase` | `Check(ctx)`, `ShouldAutoInstall(info)`, `ShouldPrompt(info)`, `PrintUpdateInfo(info)` | GitHub release check |
 
 ### Repository Layer (`internal/repository/`)
 
@@ -484,6 +484,8 @@ delivery/cli/  (wires dependencies, handles CLI input)
 | Package | File | Purpose |
 | :--- | :--- | :--- |
 | `cli/` | `root.go` | Cobra root command + subcommand wiring |
+| `cli/` | `wizard.go` | Interactive project creation wizard |
+| `cli/` | `shell.go` | Interactive development REPL |
 
 ---
 
@@ -519,16 +521,15 @@ delivery/cli/  (wires dependencies, handles CLI input)
 
 Banners are built directly in the CLI layer using ANSI terminal utilities. Shared helpers live in the CLI package:
 
-- Dynamic width detection (`tput cols` equivalent via `golang.org/x/term`)
+- Dynamic width detection (`tput cols` via `os/exec`)
 - Text centering, box drawing with Unicode chars
 - Color styles via ANSI constants
-- SIGWINCH handling for terminal resize
 
 ### Color Utilities (`pkg/logger/logger.go`)
 
 | Function/Type | Description |
 | :--- | :--- |
-| `slog.Level` extensions | Custom levels (Debug, Info, Step, Success, Warning, Error) |
+| `slog.Level` extensions | Custom levels (Debug, Info, Step, Success, Warn, Error) |
 | `logger.Init(verbose bool)` | Initialize structured logger |
 | `logger.Debug(msg, args...)` | Debug-level logging |
 | `logger.Info(msg, args...)` | Info-level logging |
@@ -550,20 +551,20 @@ ASCII art logo loaded and rendered during `tamk create` and `tamk version`.
 | Component | Function |
 | :--- | :--- |
 | `Watcher` | fsnotify-based file watcher with single-timer debounced callback |
-| `New(onChange func(string), debounce time.Duration)` | Create new watcher with debounce |
-| `Start(path string)` | Begin watching directory recursively |
+| `New(handler FileChangeHandler, debounce time.Duration)` | Create new watcher with debounce |
+| `Start(watchPath string)` | Begin watching directory recursively (returns error) |
 | `Stop()` | Stop watcher gracefully |
 | `IsRunning()` | Check if watcher is active |
-| Watch extensions | `.html`, `.css`, `.js`, `.json`, `.png`, `.jpg`, `.jpeg`, `.svg`, `.webp` |
-| Ignore patterns | `.git`, `node_modules`, `assets/cache`, `secret` |
+| Watch extensions | `.html`, `.css`, `.js`, `.json`, `.png`, `.jpg`, `.jpeg`, `.svg`, `.webp`, `.xml`, `.kt` |
+| Ignore patterns | `.git`, `node_modules`, `secret`, `.idea` |
 
 ### Config (`internal/config/config.go`)
 
 | Feature | Details |
 | :--- | :--- |
 | `Version` | `"2026.3.0-HMR"` |
-| Environment detection | Termux (`/com.termux`), SmartIDE (`/org.smartide.code`), unknown |
-| Secure paths | `SecurePath()` with `filepath.Abs()` + `filepath.Clean()` |
+| Environment detection | Termux (`/data/data/com.termux`), Debian, Ubuntu, Arch/Manjaro, Fedora, unknown |
+| Secure paths | `SecurePath()` with `filepath.Join()` + `filepath.Clean()` + prefix check |
 | Path validation | Ensures all paths are under home or cwd |
 | Template resolution | `GetTemplateDir(type)` — searches TAMK_HOME, source dir, cwd, system paths |
 
@@ -571,19 +572,26 @@ ASCII art logo loaded and rendered during `tamk create` and `tamk version`.
 
 | Component | Description |
 | :--- | :--- |
-| `Print(url string)` | Render QR code in terminal using Unicode block chars |
 | `PrintTerminal(url string)` | Render QR code in terminal using Unicode block chars |
 
 ### Errors (`pkg/errors/errors.go`)
 
 | Sentinel | Description |
 | :--- | :--- |
+| `ErrInvalidURL` | Invalid URL (must be http/https) |
 | `ErrProjectNotFound` | No project in current directory |
-| `ErrBuildFailed` | Generic build failure |
+| `ErrSDKNotFound` | SDK not configured (run `tamk setup`) |
+| `ErrKeystoreNotFound` | Keystore file not found |
 | `ErrKeystoreInvalidPass` | Wrong keystore password |
+| `ErrBuildFailed` | Generic build failure |
+| `ErrTemplateNotFound` | Template file not found |
+| `ErrPathTraversal` | Path traversal detected |
 | `ErrNotAWebAppProject` | Dev mode only supports WebApp |
-| `ErrWebSocketNotAvailable` | WebSocket server unavailable |
+| `ErrAPKBaseNotFound` | APK base not found (build project first) |
+| `ErrUpdateCheckFailed` | Update check failed |
+| `ErrDeviceNotConnected` | No device connected |
 | `ErrWatchdogNotAvailable` | fsnotify unavailable |
+| `ErrWebSocketNotAvailable` | WebSocket server unavailable |
 | `BuildError` | Structured build error with Phase field |
 
 ---
@@ -623,11 +631,11 @@ Two independent hooks systems coexist in the project:
 
 | Directory | Trigger | Purpose | Standard |
 | :--- | :--- | :--- | :--- |
-| `.githooks/` | `git commit` | Code quality gates (fmt, vet, tests, bench) | Git convention via `core.hooksPath` |
+| `.githooks/` | `git commit` | Code quality gates (fmt, vet, tests, bench + perf regression guard) | Git convention via `core.hooksPath` |
 | `.agents/hooks/` | Agent task completion | User notification (vibrate/notify) | opencode agent lifecycle |
 
 **Do not conflate them.** They serve different layers:
-- `.githooks/pre-commit` runs on every `git commit` — enforces Go formatting, vet, tests, and benchmarks.
+- `.githooks/pre-commit` runs on every `git commit` — enforces Go formatting, vet, tests, and benchmarks with performance regression detection.
 - `.agents/hooks/work-finished` runs when an AI agent finishes a task — notifies the user.
 
 ### Setup
@@ -642,10 +650,10 @@ make setup  # Includes: git config core.hooksPath .githooks
 
 ### Security Measures
 
-- **Path sanitization**: All user-supplied paths are sanitized (path traversal blocked, special chars filtered)
+- **Path sanitization**: All user-supplied paths are sanitized (`SanitizePath()` blocks special chars `[;&|`$]` + path traversal via `filepath.Clean()`)
 - **Password handling**: Never logged, redacted in error output (`--ks-pass [REDACTED]`)
 - **Subprocess safety**: `exec.Command()` list-based (no shell interpolation), shell=True equivalent never used
-- **File permissions**: Keystore files set to `0o600` (owner read/write only)
+- **File permissions**: Project keystore files set to `0o600` (owner read/write only); debug keystore uses `0o644`
 - **SDK validation**: Ensured via download from canonical source; SHA-256 used for source change detection (build cache)
 - **Keystore isolation**: Per-project keystore (`secret/project.keystore`) with debug fallback
 - **Input validation**: Project names, versions, packages validated via value objects before creation
@@ -691,7 +699,7 @@ make setup  # Includes: git config core.hooksPath .githooks
 
 ## CRITICAL NOTES
 
-- **Templates**: All templates in `assets/templates/` — never modify without testing both creation and build.
+- **Templates**: All templates in `templates/` — never modify without testing both creation and build.
 - **Keystore**: Sensitive files in `secret/` — never log or expose passwords in error output.
 - **Environment**: Assumes Termux with Go 1.26+, OpenJDK 21, Kotlin, aapt2, apksigner, zipalign.
 - **SDK Path**: Configured via `internal/config/config.go` from `TAMK_HOME` or auto-detected; falls back to `tamk setup`.

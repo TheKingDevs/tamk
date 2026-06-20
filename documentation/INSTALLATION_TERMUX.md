@@ -103,7 +103,7 @@ Após instalar:
   ├── cmd/tamk/main.go    # Entrada principal (Go)
   ├── internal/           # Clean Architecture layers
   ├── pkg/                # Pacotes compartilhados
-  ├── assets/templates/   # Templates de projeto
+  ├── templates/          # Templates de projeto
   └── documentation/
 
 ~/.tamk/                   # Configuração do usuário
