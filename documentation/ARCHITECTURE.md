@@ -1,84 +1,281 @@
-> Este documento detalha a arquitetura interna do T.A.M.K, com foco na interação entre os componentes e no fluxo de dados, especialmente após a introdução do suporte a WebApps.
+# 🏗️ T.A.M.K Architecture
 
-## Visão Geral da Arquitetura
+> **Version:** 2026.3.0-HMR — Complete internal architecture and data flow documentation.
 
-A arquitetura do T.A.M.K é baseada em um padrão de **injeção de dependência** e **factory**, onde a interface de linha de comando (CLI) atua como o ponto de entrada que orquestra diferentes controladores e serviços. O sistema é projetado para ser modular, permitindo que novos tipos de projeto, como o de WebApp, sejam adicionados com impacto mínimo no núcleo existente.
+---
+
+## 📋 Overview
+
+T.A.M.K is built with **Clean Architecture v4** in Go. The CLI (Cobra) delegates to use cases that orchestrate domain entities and repositories. Templates are processed via `internal/repository/filesystem/template_repository.go` to generate Android projects.
+
+```
+┌──────────────────────────────────────────────────┐
+│                  delivery/cli/                    │  Cobra commands
+├──────────────────────────────────────────────────┤
+│                   usecase/                        │  Business logic
+├──────────────────────────────────────────────────┤
+│              repository/filesystem/               │  File I/O
+│                  repository/                      │  Remote (GitHub API)
+├──────────────────────────────────────────────────┤
+│     domain/entity/    domain/valueobject/         │  Core types, validation
+│     domain/repository/                           │  Interface contracts
+├──────────────────────────────────────────────────┤
+│              pkg/ (shared utilities)              │  Logger, errors, watcher, qrcode
+├──────────────────────────────────────────────────┤
+│          internal/config/                         │  Central configuration
+└──────────────────────────────────────────────────┘
+```
+
+---
+
+## 🗺️ Component Diagram
 
 ```mermaid
 graph TD
-    subgraph "Entrada do Usuário"
-        A[CLI: main.py]
-    end
-
-    subgraph "Orquestração"
-        B(ProjectManager)
-        C(BuildController)
-        D(SetupController)
-    end
-
-    subgraph "Criação de Projetos"
-        E{ProjectFactory}
-    end
-
-    subgraph "Estruturas de Projeto"
-        F[UI/APK Structure]
-        G[Console Structure]
-        H[WebApp Structure]
-    end
-
-    subgraph "Motor de Templates"
-        I[Template Engine]
-    end
-
-    subgraph "Saída"
-        J((Projeto Gerado))
-        K((APK Final))
-    end
-
-    A -- tamk --create --> B;
-    A -- tamk --build --> C;
-    A -- tamk --setup --> D;
-
-    B --> E;
-
-    E -- "ui_apk" --> F;
-    E -- "console" --> G;
-    E -- "webapp" --> H;
-
-    F & G & H --> I;
-    I --> J;
-    C --> K;
+    A[cmd/tamk/main.go] --> B[cobra.Command]
+    
+    B -->|create| C[CreateProjectUseCase]
+    B -->|build| D[BuildProjectUseCase]
+    B -->|dev| E[DevModeUseCase]
+    B -->|run| F[Run (stub)]
+    B -->|setup| G[SetupEnvironmentUseCase]
+    B -->|install| H[InstallUseCase]
+    B -->|update| I[UpdateUseCase]
+    B -->|version| J[Config]
+    
+    C --> K[ProjectRepository]
+    C --> L[TemplateRepository]
+    D --> M[BuildRepository]
+    D --> K
+    E --> D
+    E --> K
+    I --> N[UpdateRepository]
+    
+    K & L & M --> O[(File System)]
+    N --> P[GitHub API]
+    
+    E --> S[File Watcher]
+    E --> T[ADB Bridge]
 ```
 
-## Componentes Principais
+---
 
-| Componente | Arquivo(s) | Responsabilidade |
+## 🔄 Project Creation Flow
+
+### WebApp (complete example)
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant CLI as cobra.Command
+    participant CUC as CreateProjectUseCase
+    participant PR as ProjectRepository
+    participant TR as TemplateRepository
+    participant FS as File System
+    
+    U->>CLI: tamk create
+    CLI->>CUC: Execute(input)
+    CUC->>PR: Create(project)
+    PR->>FS: Create directories
+    PR->>FS: Generate keystore
+    CUC->>TR: Render(templates)
+    TR->>FS: Write files
+    CUC->>PR: SaveConfig()
+    PR-->>CUC: Output
+    CUC-->>CLI: Success
+    CLI->>U: ✅ Project created!
+```
+
+---
+
+## 🔄 Full Build Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant BUC as BuildProjectUseCase
+    participant BR as BuildRepository
+    participant AP as AAPT2
+    participant KT as kotlinc
+    participant D8 as D8
+    participant ZIP as zipalign
+    participant AS as apksigner
+    
+    U->>BUC: tamk build -p senha
+    BUC->>BR: ValidateProject()
+    BUC->>BR: CalculateHash()
+    BUC->>BR: MustRecompile()
+    alt Cache hit
+        BUC->>U: ✨ Nada mudou
+    else Recompile
+        BUC->>BR: CompileResources()
+        BR->>AP: aapt2 compile --dir res
+        AP-->>BR: res.zip
+        BR->>AP: aapt2 link -I sdk -o app.apk res.zip
+        AP-->>BR: app.apk
+        BR->>KT: kotlinc src -cp sdk -d obj/
+        KT-->>BR: .class files
+        BR->>D8: d8 --lib sdk *.class
+        D8-->>BR: classes.dex
+        BR->>BR: zip -j app.apk classes.dex
+        BR->>ZIP: zipalign -f 4 app.apk app-unsigned.apk
+        BR->>AS: apksigner sign --out {name}-{version}-release.apk
+        AS-->>BR: {name}-{version}-release.apk
+        BUC->>BR: SaveHash()
+        BUC->>U: ✅ {name}-{version}-release.apk
+    end
+```
+
+---
+
+## 🔄 HMR (Dev Mode) Flow
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant DUC as DevModeUseCase
+    participant FW as FileWatcher
+    participant BUC as BuildProjectUseCase
+    participant ADB as ADB Bridge
+    participant App as WebView
+    
+    Dev->>DUC: tamk dev
+    DUC->>DUC: Validate project
+    DUC->>DUC: Inject dev bridge
+    DUC->>FW: Start(assets/)
+    DUC->>BUC: AssetsOnlyBuild() (initial)
+    
+    loop File Changes
+        FW->>DUC: onChange(path)
+        
+        alt CSS/JS/JSON
+            Note over DUC: Hot-swap ready (logs only)
+        else HTML/Images
+            DUC->>BUC: AssetsOnlyBuild()
+            BUC->>ADB: adb install -r {name}-{version}-dev.apk
+            ADB->>App: Install APK
+            App->>App: Reload
+        end
+    end
+    
+    Dev->>DUC: Ctrl+C
+    DUC->>FW: Stop()
+    DUC->>DUC: Remove bridge, restore index.html
+```
+
+---
+
+## 🗄️ Clean Architecture Layers
+
+### Domain Layer (`internal/domain/`)
+
+| Package | Types | Purpose |
 | :--- | :--- | :--- |
-| **Interface CLI** | `src/main.py` | Ponto de entrada que interpreta os argumentos da linha de comando (`--create`, `--build`, etc.) e aciona os controladores correspondentes. |
-| **Controladores** | `src/controllers/` | Contêm a lógica de negócio principal. `BuildController` gerencia a compilação, `ProjectManager` orquestra a criação de projetos e `SetupController` cuida da configuração do ambiente. |
-| **Project Factory** | `src/organization/factory.py` | Componente central para a criação de projetos. Com base no tipo de projeto selecionado pelo usuário, ele instancia a classe de estrutura apropriada (`WebAppStructure`, `UIAppStructure`, etc.). |
-| **Estruturas** | `src/organization/structures/` | Definem o "esqueleto" de cada tipo de projeto. A `WebAppStructure`, por exemplo, sabe quais pastas criar (`src/main/assets`) e quais templates processar para um projeto WebApp. |
-| **Template Engine** | (Implementado nas classes de estrutura) | Um mecanismo simples de busca e substituição que lê os arquivos `.tmpl` da pasta `assets/templates/`, substitui os placeholders (ex: `{{NAME}}`, `{{PACKAGE}}`) e grava os arquivos finais no diretório do projeto gerado. |
+| `entity/` | `Project`, `ProjectType`, `BuildResult`, `Template`, `Keystore`, `VersionInfo`, `UpdateLevel` | Core domain types, zero external dependencies |
+| `valueobject/` | `ProjectName`, `Version`, `PackageName` | Immutable value objects with built-in validation |
+| `repository/` | `ProjectRepository`, `BuildRepository`, `TemplateRepository`, `UpdateRepository` | Interface contracts (ports) |
 
-## Fluxo de Criação de um WebApp
+### Use Case Layer (`internal/usecase/`)
 
-1.  O usuário executa `tamk --create`.
-2.  O `main.py` aciona o `ProjectManager`.
-3.  O `ProjectManager` inicia o assistente interativo e pergunta o tipo de projeto.
-4.  O usuário seleciona "WebApp".
-5.  O `ProjectManager` invoca `ProjectFactory.create("webapp", ...)` com os dados do usuário.
-6.  O `ProjectFactory` instancia `WebAppStructure`.
-7.  A `WebAppStructure.setup()` é executada, realizando as seguintes ações:
-    *   Cria a estrutura de diretórios, incluindo `src/main/assets/`.
-    *   Processa os templates específicos de WebApp (como `MainActivity.kt.tmpl` que contém a lógica do `WebView`) e os templates comuns (ícones, estilos).
-    *   Gera uma Keystore privada para o projeto.
-8.  O resultado é um projeto Android completo e autônomo, pronto para ter seu conteúdo web adicionado à pasta `assets`.
+| Use Case | Key Methods | Description |
+| :--- | :--- | :--- |
+| `CreateProjectUseCase` | `Execute(input)` | Project creation wizard, template processing |
+| `BuildProjectUseCase` | `FullBuild(ctx, input)`, `AssetsOnlyBuild(ctx, input)` | Full + incremental APK build |
+| `DevModeUseCase` | `Start(ctx, projectPath, password)`, `Stop(ctx)` | HMR dev mode orchestrator |
+| `SetupEnvironmentUseCase` | `Execute()` | SDK download + keystore generation |
+| `InstallUseCase` | `Serve(ctx, projectPath, port)`, `FindAPK()` | HTTP server + QR code for APK download |
+| `UpdateUseCase` | `Check(ctx)`, `ShouldAutoInstall(info)`, `ShouldPrompt(info)` | GitHub release checks |
+| *(helper)* `zipDir` | `internal/usecase/zip.go` | Archive helper for directory zipping |
 
-## O Papel do WebView
+### Repository Layer (`internal/repository/`)
 
-O coração do projeto WebApp é o componente `WebView` do Android. A classe `MainActivity.kt` gerada pelo T.A.M.K é responsável por configurar este componente de forma otimizada:
+| Repository | Implements | Responsibility |
+| :--- | :--- | :--- |
+| `filesystem.ProjectRepository` | `domain/repository.ProjectRepository` | Project CRUD on disk |
+| `filesystem.BuildRepository` | `domain/repository.BuildRepository` | Build pipeline (aapt2, kotlinc, d8, etc.) |
+| `filesystem.TemplateRepository` | `domain/repository.TemplateRepository` | Template loading + rendering |
+| `update_repository.go` | `domain/repository.UpdateRepository` | GitHub API client |
 
-- **JavaScript Ativado**: `webView.settings.javaScriptEnabled = true` permite que toda a lógica do seu site funcione como esperado.
-- **Armazenamento DOM**: `webView.settings.domStorageEnabled = true` é crucial para frameworks modernos que utilizam `localStorage`.
-- **Navegação Interna**: O `WebViewClient` é configurado para que todos os links clicados dentro do seu site abram no próprio aplicativo, em vez de em um navegador externo.
-- **Carregamento Local**: O `WebView` é instruído a carregar o arquivo `file:///android_asset/index.html`, que aponta diretamente para a pasta `assets` do seu projeto APK.
+### Delivery Layer (`internal/delivery/`)
+
+| Package | File | Purpose |
+| :--- | :--- | :--- |
+| `cli/` | `root.go` | Cobra root command + subcommand wiring |
+
+---
+
+## 🔧 Central Configuration
+
+### `Config` (`internal/config/config.go`)
+
+```go
+const Version = "2026.3.0-HMR"
+
+type Config struct {
+    Version  string
+    Env      Environment  // "termux" | "smartide" | "unknown"
+    TAMKHome string       // Base path ($TAMK_HOME or auto-detected)
+    DevDir   string       // development/
+    SDKPath  string       // development/sdk/android.jar
+    Keystore string       // development/secret/debug.keystore
+}
+```
+
+### Template Resolution
+
+`GetTemplateDir()` searches in order:
+1. `$TAMK_HOME/assets/templates/{type}/`
+2. Source-relative `assets/templates/{type}/`
+3. `cwd/assets/templates/{type}/`
+4. `/data/data/com.termux/files/usr/opt/tamk/assets/templates/{type}/`
+5. `/usr/opt/tamk/assets/templates/{type}/`
+
+---
+
+## 📊 External Dependencies
+
+| Tool | Usage | Required? |
+| :--- | :--- | :--- |
+| `go 1.26+` | Core engine | ✅ |
+| `openjdk-21` | Kotlin/Java compilation | ✅ (for build) |
+| `kotlinc` | Kotlin compiler | ✅ (for build) |
+| `aapt2` | Android asset packaging | ✅ (for build) |
+| `apksigner` | APK signing | ✅ (for build) |
+| `zipalign` | APK alignment | ✅ (for build) |
+| `d8` | DEX compiler | ✅ (for build) |
+| `keytool` | Keystore generation | ✅ |
+| `wget` | SDK download | ✅ (for setup) |
+| `zip` | APK packaging | ✅ |
+| `toilet` | ASCII art banners | Optional |
+| `adb` | Device bridge | Optional (for auto-install) |
+
+---
+
+## 🔐 Security
+
+### Implemented Measures
+
+1. **Path sanitization** — `SanitizePath()` removes `[;&|\`$]` and blocks path traversal
+2. **Password handling** — Zeroed after use (`clear` byte slice), redacted in logs
+3. **Subprocess safety** — `exec.Command()` list-based (no shell interpolation)
+4. **File permissions** — Keystore at `0o600`
+5. **SDK validation** — SHA-256 hash verification
+6. **Input validation** — Names, versions, packages validated via value objects before creation
+7. **Build timeouts** — 10-minute timeout on full build, 5-minute on assets build via `context.WithTimeout`
+
+---
+
+## 📈 Metrics
+
+- **Go source files**: 39 modules
+- **Test files**: 9 (`*_test.go`)
+- **Templates**: 20 `.tmpl` files
+- **Documentation**: 23 `.md` files
+- **Lines of code**: ~3,500 Go, ~300 Kotlin (templates)
+- **Go version**: 1.26.3
+
+---
+
+<div align="center">
+  <sub>T.A.M.K v2026.3.0-HMR — Architecture Documentation</sub>
+</div>

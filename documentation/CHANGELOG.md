@@ -1,208 +1,183 @@
-# 📋 Changelog do T.A.M.K
+# 📋 T.A.M.K Changelog
 
-Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/), e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
-
----
-
-## [ 2.3.2 ] - 2026-03-29
-
-### 🔧 Corrigido
-
--   **Caminho de Instalação**: Correção no export do caminho de instalação e atualização do ambiente esperado.
-    -   Path resolution corrigido para Termux.
-    -   Variáveis de ambiente de output atualizadas.
+All notable changes. Format based on [Keep a Changelog](https://keepachangelog.com/), adhering to [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [ 2.3.1 ] - 2026-03-29
+## [2026.3.0-HMR] - 2026-06-18
 
-### 🎨 Adicionado
+### ✨ Added
 
--   **Identidade Visual**: Integração do logo do projeto.
+- **Development Mode (HMR)**: `tamk dev` with complete Hot Module Replacement
+  - CSS hot reload without state loss
+  - JavaScript HMR with module injection and state preservation
+  - JSON real-time data update
+  - WebSocket server (port 8765) + HTTP fallback (port 8080)
+  - File watcher (fsnotify) with 500ms debounce
+  - Incremental asset build (`BuildAssetsOnly()`)
+  - ADB auto-install + asset push + broadcast refresh
+  - HMR server with module registry and client state tracking
+  - Bridge JS `tamk-dev-bridge.js` automatically injected
+  - Backup and restore of `index.html`
+- **Automatic Update System**:
+  - `Checker` with 6h cache and GitHub API
+  - 5 priority levels: CRITICAL, MAJOR, MINOR, PATCH, OPTIONAL
+  - Auto-updater with backup, 3 methods (git/go install/script)
+- **Remote URL WebApp**: Support for loading external URLs in WebView
+- **Java Support**: Run controller now executes `.java` besides `.kt`
 
-### 🔧 Corrigido
+### 🔧 Changed
 
--   **Sistema de Banner**: Correção no sistema de renderização e atualização do banner.
-    -   Lógica de update do banner corrigida.
-    -   Renderização via toilet ajustada.
+- **Complete migration from Python to Go with Clean Architecture v4**
+  - Language: Python 3.x → Go 1.26
+  - CLI framework: argparse → Cobra
+  - Architecture: Controllers + Factory → Clean Architecture (domain → usecase → repository → delivery)
+  - Logger: Custom Python logger → structured slog-based logger with ANSI colors
+  - File watcher: watchdog (Python) → fsnotify (Go)
+  - Build: `python src/main.py` → `go build ./cmd/tamk`
+  - Binary: PyInstaller bundle → native Go binary at `bin/tamk`
+  - Template engine: string replacements → `text/template` wrapper in `pkg/templateengine`
+  - Update checker: standalone Python → `pkg/updater` + `internal/usecase/update.go`
+- **Dev mode**: `onFileChanged()`, `BuildAssetsOnly()`, status command, 1s cooldown
+- **HMR server**: `HandleConnection()` with HMR handshake, `BroadcastHMRUpdate()`, 30s heartbeat
+- **Build pipeline**: `FullBuild()`, `BuildAssetsOnly()` incremental, `PushAssetToDevice()` via ADB
+- **Template system**: `TemplateRepository` loading + `pkg/templateengine` rendering
+- **Config**: Environment detection in `internal/config/config.go`, `GetTemplateDir()` multi-path fallback
+- **Dependency injection**: All use cases wired in `root.go` with constructor injection
 
----
+### 📚 Documentation
 
-## [ 2.3.0 ] - 2026-03-29
-
-### ✨ Adicionado
-
--   **HMR - Hot Module Replacement**: Sistema completo de atualização em tempo real para WebApps.
-    -   **CSS Hot Reload**: Atualização de CSS sem reload da página, preservando scroll e estado.
-    -   **JavaScript HMR**: Injeção de módulos JS sem reload, com suporte a handlers customizados.
-    -   **JSON HMR**: Atualização de dados JSON em tempo real.
-    -   **State Preservation**: Estado da aplicação (formulários, scroll, dados) é preservado entre updates.
-    -   Nova classe `DevServer` com módulo registry e client state tracking em `src/controllers/dev_controller.py`.
-    -   Bridge JavaScript atualizado para versão `2026.3.0-HMR` em `assets/templates/webapp/dev_bridge.js.tmpl`.
-    -   API HMR exposta globalmente: `TAMK_HMR.accept()`, `TAMK_HMR.saveState()`, `TAMK_HMR.getState()`.
-    -   Nova documentação: `HMR_GUIDE.md` com exemplos e troubleshooting.
-
-### 🔧 Modificado
-
--   **`DevController`**:
-    -   Adicionado método `_on_file_changed()` com suporte a HMR por tipo de arquivo.
-    -   Método `_quick_assets_build()` agora envia notificação de reload com state preservation.
-    -   Instructions atualizadas com informações sobre HMR API.
-    -   Comando de status `s` agora mostra módulos registrados e clientes HMR.
--   **`DevServer`**:
-    -   Adicionado `handler()` para gerenciar conexões WebSocket com handshake HMR.
-    -   Adicionado `register_module()` para registry de módulos JS.
-    -   Adicionado `broadcast_hmr_update()` para envio seletivo de updates por tipo de arquivo.
-    -   Adicionado `client_states` tracking para monitorar estado de cada cliente.
--   **`dev_bridge.js.tmpl`**:
-    -   Atualizado para versão 2026.3.0-HMR.
-    -   Adicionado objeto `TAMK_DEV.hmr` com registry de módulos e handlers.
-    -   Adicionado método `handleJavaScriptHMR()` para injeção de módulos.
-    -   Adicionado `captureFormData()` e `restoreFormData()` para preservação de estado.
-    -   Adicionado heartbeat com envio de módulos carregados.
-
-### 📚 Documentação
-
--   **`HMR_GUIDE.md`**: Guia completo de Hot Module Replacement com exemplos práticos.
-
----
-
-## [ 2.2.0 ] - 2026-02-27
-
-### ✨ Adicionado
-
--   **WebApps Hospedados**: Suporte para criação de WebApps via URL.
-    -   Carregamento de aplicações web remotas no WebView.
-    -   Flexibilidade para apps baseados em serviços externos.
-
-### 🔗 Novos Casos de Uso
-
--   Desenvolvedores podem agora criar APKs que carregam aplicações web já hospedadas.
--   Ideal para wrappers de PWA e aplicações SaaS.
+- AGENTS.md completely rewritten (Go + Clean Architecture, 16 sections, Mermaid diagrams)
+- ARCHITECTURE.md updated with Clean Architecture layer diagrams
+- API_COMPONENTS.md updated with Go package reference
+- QUICKSTART.md updated for Go binary usage
+- STRUCTURE.md updated with Go project tree
+- README.md restructured with technology table and architecture sections
+- HMR_SYSTEM.md, HMR_GUIDE.md, HMR_EXAMPLES.md (new)
+- UPDATE_SYSTEM.md (new)
+- BANNER_UTILS.md (new)
+- CLAUDE.md, GEMINI.md updated
+- MIGRATION_PLAN.md (internal migration tracking)
 
 ---
 
-## [ 2.1.2 ] - 2026-01-21
+## [2.3.2] - 2026-03-29
 
-### 📌 Atualizado
+### 🔧 Fixed
 
--   **Créditos de Contribuidor**: Atualização no README com créditos de contribuidores.
-
----
-
-## [ 2.1.1 ] - 2026-01-21
-
-### 🔧 Corrigido
-
--   **Projetos Console**: Correção de erros na construção e estrutura de projetos Console.
-    -   Template `Main.kt` implementado para entrada de aplicações console.
-    -   Estrutura de diretórios corrigida.
-
-### 📚 Documentação
-
--   **`CONSOLE_TEMPLATES.md`**: Documentação completa de templates para projetos Console.
+- Installation path: path resolution corrected, environment variables updated
 
 ---
 
-## [ 2.1.0 ] - 2026-01-20
+## [2.3.1] - 2026-03-29
 
-### ✨ Adicionado
+### 🎨 Added
 
--   **CLI Modernizada**: Nova interface de linha de comando com UX aprimorada.
-    -   Sistema de input moderno com suporte a `tput`.
-    -   Centralização de layout via `toilet`.
-    -   Esquema de cores atualizado em `colors.py`.
+- Visual identity: project logo integration
 
-### 🔧 Melhorado
+### 🔧 Fixed
 
--   **URLs do Repositório**: Correção de todas as URLs nos documentos:
-    -   `README.md`, `CONTRIBUTING.md`, `QUICKSTART.md` atualizados.
--   **Interface do Usuário**: Experiência de terminal profissional e consistente.
+- Banner system: rendering and update, toilet adjusted
 
 ---
 
-## [ 2.0.1 ] - 2026-01-20
+## [2.3.0] - 2026-03-29
 
-### 📝 Corrigido
+### ✨ Added
 
--   **README**: Ajuste de formatação no título.
+- HMR - Hot Module Replacement (initial version)
+  - CSS Hot Reload, JavaScript HMR, JSON HMR
+  - State Preservation
+  - DevServer with module registry
 
----
+### 🔧 Changed
 
-## [ 2.0.0 ] - 2026-01-20
-
-### ✨ Adicionado
-
--   **Suporte a WebApps**: Introdução de um novo tipo de projeto que permite encapsular aplicações web (HTML, CSS, JavaScript) em um APK nativo do Android.
-    -   Nova classe `WebAppStructure` em `src/organization/structures/webapp.py`.
-    -   Novos templates em `assets/templates/webapp/`:
-        -   `AndroidManifest.xml.tmpl` com permissões de internet.
-        -   `MainActivity.kt.tmpl` com configuração otimizada de `WebView`.
-        -   `index.html.tmpl` como ponto de partida para desenvolvimento web.
-    -   Criação automática da pasta `src/main/assets/` em projetos WebApp, onde o desenvolvedor coloca seus arquivos web.
-
-### 📚 Documentação
-
--   **Documentação Completa**: Novos arquivos de documentação para guiar desenvolvedores:
-    -   `ARCHITECTURE.md`: Visão geral da arquitetura do sistema.
-    -   `API_COMPONENTS.md`: Referência técnica de classes e módulos.
-    -   `DEV_GUIDE.md`: Guia prático de desenvolvimento e deployment.
-    -   `WEBAPP_TEMPLATES.md`: Código-fonte completo de todos os templates de WebApp.
-    -   `CONSOLE_TEMPLATES.md`: Templates de projetos Console.
-    -   `FAQ.md`: Perguntas frequentes.
-    -   `QUICKSTART.md`: Guia de início rápido.
-
-### 🔧 Modificado
-
--   **`BuildController`**: Atualizado para detectar e empacotar a pasta `src/main/assets/` durante o build, usando a flag `-A` do `aapt2 link`.
--   **`ProjectFactory`**: Adicionado o mapeamento `"webapp": WebAppStructure()` para suportar a criação de projetos WebApp.
--   **`README.md`**: Atualizado para incluir informações sobre o novo tipo de projeto WebApp e seu fluxo de trabalho.
-
-### 🐛 Corrigido
-
--   Correção na lógica de detecção de Keystore no `BuildController`, garantindo que a senha correta seja usada para projetos com Keystore privada.
-
-### ⚠️ Breaking Changes
-
--   **Documentação movida**: A documentação foi movida da raiz do projeto para a pasta `documentation/`.
+- DevController: `_on_file_changed()` with per-type HMR
+- `_quick_assets_build()` with reload notification
+- `dev_bridge.js.tmpl` updated for 2026.3.0-HMR
 
 ---
 
-## [ 1.0.0 ] - 2026-01-20
+## [2.2.0] - 2026-02-27
 
-### ✨ Adicionado
+### ✨ Added
 
--   **Lançamento Inicial**: Primeira versão estável do T.A.M.K.
-    -   Suporte para criação de projetos do tipo **UI APK** (aplicativos Android nativos com interface XML).
-    -   Suporte para criação de projetos do tipo **Console** (aplicações Kotlin de linha de comando).
-    -   Pipeline completo de build: compilação de recursos, código Kotlin, geração de DEX, assinatura e alinhamento de APK.
-    -   Sistema de templates modular com placeholders (`{{NAME}}`, `{{PACKAGE}}`, etc.).
-    -   Script de instalação `setup-install.sh` para Termux.
-    -   Keystore privada por projeto.
-    -   Factory pattern para estruturas de projeto.
-
-### 🏗️ Arquitetura
-
--   **Controllers**: `ProjectManager`, `BuildController`, `SetupController`.
--   **Structures**: `UIAppStructure`, `ConsoleStructure`, `WebAppStructure`.
--   **Templates**: Sistema de templates `.tmpl` com injeção de placeholders.
+- Hosted WebApps: remote URL support in WebView
 
 ---
 
-## Formato de Versionamento
+## [2.1.2] - 2026-01-21
 
-O T.A.M.K utiliza o **Versionamento Semântico (SemVer)** no formato `MAJOR.MINOR.PATCH`:
+### 📌 Updated
 
--   **MAJOR**: Mudanças incompatíveis ou marcos significativos
--   **MINOR**: Novas funcionalidades compatíveis
--   **PATCH**: Correções de bugs e melhorias menores
+- Contributor credits in README
 
-**Exemplo**: `2.3.0` indica a segunda major release, terceira minor release, versão estável.
+---
 
-### Tags de Release
+## [2.1.1] - 2026-01-21
 
-Cada versão é marcada com uma tag anotada no Git:
-```bash
-git tag -l          # Listar todas as tags
-git show v2.3.0     # Ver detalhes de uma release
-```
+### 🔧 Fixed
+
+- Console projects: structure and `Main.kt` template
+
+---
+
+## [2.1.0] - 2026-01-20
+
+### ✨ Added
+
+- Modernized CLI with improved UX
+- Input system with `tput`, layout with `toilet`
+
+---
+
+## [2.0.1] - 2026-01-20
+
+### 📝 Fixed
+
+- README: title formatting
+
+---
+
+## [2.0.0] - 2026-01-20
+
+### ✨ Added
+
+- **WebApp Support**: WebView + HTML/CSS/JS in APK
+- WebAppStructure, webapp templates
+- Complete documentation (ARCHITECTURE, API_COMPONENTS, DEV_GUIDE, etc.)
+
+### 🔧 Changed
+
+- BuildController: `-A` flag for assets
+- ProjectFactory: webapp mapping
+- README with WebApp flow
+
+---
+
+## [1.0.0] - 2026-01-20
+
+### ✨ Added
+
+- Initial release
+- UI APK (native XML) and Console (Kotlin CLI)
+- Build pipeline (aapt2, kotlinc, d8, apksigner, zipalign)
+- `.tmpl` template system
+- `setup-install.sh` installer
+- Per-project private keystore
+
+---
+
+## Versioning Format
+
+`MAJOR.MINOR.PATCH` (with optional suffix):
+- **MAJOR**: Incompatible changes
+- **MINOR**: New compatible features
+- **PATCH**: Bug fixes
+- **-HMR**: Release with Hot Module Replacement support
+
+---
+
+<div align="center">
+  <sub>T.A.M.K v2026.3.0-HMR — Changelog</sub>
+</div>

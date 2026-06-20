@@ -49,7 +49,7 @@ sudo ./install.sh
 
 ```bash
 # Feche o terminal e abra um novo, depois:
-tamk --version
+tamk version
 tamk --help
 ```
 
@@ -84,16 +84,16 @@ xattr -d com.apple.quarantine /opt/tamk/tamk
 
 ```bash
 # Criar novo projeto
-tamk --create
+tamk create
 
 # Compilar projeto
-tamk --build -p sua-senha
+tamk build -p sua-senha
 
 # Instalar APK no dispositivo
-tamk --install
+tamk install
 
 # Modo desenvolvimento
-tamk --dev
+tamk dev
 
 # Ver opções
 tamk --help
@@ -116,7 +116,7 @@ rm -rf ~/.tamk/
 
 ```bash
 # Verificar atualizações
-tamk --update
+tamk update
 
 # Ou reinstalar manualmente
 sudo rm -rf /opt/tamk /usr/local/bin/tamk
@@ -244,7 +244,7 @@ sudo ln -s /opt/tamk/tamk /usr/local/bin/tamk
 
 Se encontrar problemas:
 
-1. Verifique a versão: `tamk --version`
+1. Verifique a versão: `tamk version`
 2. Confira a arquitetura: `uname -m` (deve ser `arm64` ou `x86_64`)
 3. Veja permissions: `ls -la /opt/tamk/`
 4. Consulte: `/opt/tamk/README.md`

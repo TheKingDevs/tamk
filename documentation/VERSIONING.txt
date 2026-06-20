@@ -1,5 +1,40 @@
-2026.1.0-alpha → Versão atual
-└── 2026: Ano
-    └── 1: Major release
-        └── 0: Minor release
-            └── alpha: Estabilidade
+# Versionamento
+
+**Versão atual:** `2026.3.0-HMR`
+
+## Esquema
+
+```
+YYYY.MAJOR.MINOR[-SUFIXO]
+
+2026.3.0-HMR
+├── 2026: Ano de release
+│   └── 3: Major (mudanças significativas)
+│       └── 0: Minor (features)
+│           └── -HMR: Sufixo (HMR = Hot Module Replacement)
+```
+
+## Sufixos
+
+| Sufixo | Significado |
+| :--- | :--- |
+| `-HMR` | Release com suporte a Hot Module Replacement |
+| `-alpha` | Versão instável para testes |
+| `-beta` | Versão de teste com features congeladas |
+| `-rc.N` | Release candidate |
+
+## Histórico
+
+| Versão | Data | Destaque |
+| :--- | :--- | :--- |
+| `2026.3.0-HMR` | 2026-06-18 | HMR completo, update system, docs |
+| `2.3.2` | 2026-03-29 | Correção path instalação |
+| `2.3.1` | 2026-03-29 | Logo + banner fixes |
+| `2.3.0` | 2026-03-29 | HMR inicial |
+| `2.2.0` | 2026-02-27 | WebApp URL remota |
+| `2.1.2` | 2026-01-21 | Créditos |
+| `2.1.1` | 2026-01-21 | Console fix |
+| `2.1.0` | 2026-01-20 | CLI modernizada |
+| `2.0.1` | 2026-01-20 | README fix |
+| `2.0.0` | 2026-01-20 | WebApp support |
+| `1.0.0` | 2026-01-20 | Lançamento |

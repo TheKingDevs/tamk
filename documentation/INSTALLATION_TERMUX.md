@@ -2,11 +2,9 @@
 
 Guia para usar T.A.M.K (Termux APK Manager Kit) diretamente no Termux sem precisar de compilação.
 
-## 📋 Por que não usar o executável compilado?
+## 📋 TAMK como Binário Go
 
-O executável `tamk` foi compilado para **Linux x86_64** em um PC/servidor. O Termux roda em **Android ARM/ARM64**, que é uma arquitetura diferente.
-
-**Solução**: Use Python nativamente no Termux! ✅
+O T.A.M.K agora é compilado como um binário Go, suportando arquitetura ARM64. Basta compilar diretamente no Termux ou usar o script de instalação.
 
 ## 🚀 Instalação Rápida no Termux
 
@@ -17,17 +15,11 @@ O executável `tamk` foi compilado para **Linux x86_64** em um PC/servidor. O Te
 pkg update
 pkg upgrade
 
-# Instalar Python 3
-pkg install python3
-
-# Instalar pip
-pkg install python3-pip
-
-# Instalar dependências do TAMK
-pip install watchdog websockets
+# Instalar Go e ferramentas essenciais
+pkg install golang git openjdk-21 kotlin wget zip apksigner aapt2
 
 # Opcional: para melhor experiência
-pkg install git nano vim
+pkg install nano vim
 ```
 
 ### 2. Clonar ou Descarregar o TAMK
@@ -47,24 +39,31 @@ unzip main.zip
 cd tamk-main
 ```
 
-### 3. Usar TAMK
+### 3. Compilar o Binário
 
 ```bash
-# Método 1: Executar direto
-python3 src/main.py --version
+# Compilar o binário Go
+cd ~/tamk
+go build -o bin/tamk ./cmd/tamk
 
-# Método 2: Criar alias para facilitar
-alias tamk='python3 ~/tamk/src/main.py'
-
-# Agora usar normalmente
-tamk --help
-tamk --create
-tamk --build -p sua-senha
+# Verificar
+bin/tamk version
 ```
 
-## 🔧 Configurar Alias Permanente
+### 4. Adicionar ao PATH
 
-Para não digitar `python3 ~/tamk/src/main.py` sempre:
+```bash
+# Adicionar ao PATH da sessão atual
+export PATH="$HOME/tamk/bin:$PATH"
+
+# Verificar
+tamk version
+tamk --help
+```
+
+## 🔧 Configurar PATH Permanente
+
+Para não precisar exportar o PATH manualmente sempre:
 
 ### 1. Editar ~/.bashrc (ou ~/.profile no Termux)
 
@@ -76,8 +75,8 @@ nano ~/.bashrc
 ### 2. Adicionar no final do arquivo
 
 ```bash
-# TAMK alias
-alias tamk='python3 ~/tamk/src/main.py'
+# Adicionar TAMK ao PATH
+export PATH="$HOME/tamk/bin:$PATH"
 ```
 
 ### 3. Aplicar mudanças
@@ -90,9 +89,9 @@ source ~/.bashrc
 ### 4. Agora use normalmente
 
 ```bash
-tamk --version
+tamk version
 tamk --help
-tamk --create
+tamk create
 ```
 
 ## 📁 Estrutura de Uso
@@ -101,11 +100,10 @@ Após instalar:
 
 ```
 ~/tamk/                    # Código fonte do TAMK
-  ├── src/main.py         # Entrada principal
-  ├── src/controllers/
-  ├── src/organization/
-  ├── src/utils/
-  ├── assets/              # Templates e recursos
+  ├── cmd/tamk/main.go    # Entrada principal (Go)
+  ├── internal/           # Clean Architecture layers
+  ├── pkg/                # Pacotes compartilhados
+  ├── assets/templates/   # Templates de projeto
   └── documentation/
 
 ~/.tamk/                   # Configuração do usuário
@@ -118,20 +116,20 @@ Após instalar:
 
 ```bash
 # 1. Ver versão
-tamk --version
+tamk version
 
 # 2. Criar novo projeto
-tamk --create
+tamk create
 # Escolher tipo: UI, Console ou WebApp
 
 # 3. Entrar no diretório do projeto
 cd ~/.tamk/projects/meu-projeto
 
 # 4. Compilar
-tamk --build -p minha-senha
+tamk build -p minha-senha
 
 # 5. Instalar no dispositivo
-tamk --install
+tamk install
 ```
 
 ## 🔐 Permissões no Termux
@@ -150,21 +148,24 @@ sudo -u termux ...
 
 ## 🆘 Solução de Problemas
 
-### Problema: "ModuleNotFoundError: No module named 'watchdog'"
+### Problema: "tamk: command not found"
 
 ```bash
-# Solução: Instalar novamente
-pip install watchdog websockets
+# Solução: Verificar PATH
+export PATH="$HOME/tamk/bin:$PATH"
+
+# Ou recompilar o binário
+cd ~/tamk && go build -o bin/tamk ./cmd/tamk
 ```
 
 ### Problema: "Permission denied" ao executar
 
 ```bash
 # Solução: Tornar executable
-chmod +x ~/tamk/src/main.py
+chmod +x ~/tamk/bin/tamk
 
-# Ou adicionar shebang e executar direto:
-~/tamk/src/main.py --version
+# Executar diretamente:
+~/tamk/bin/tamk version
 ```
 
 ### Problema: "java: command not found"
@@ -185,7 +186,7 @@ java -version
 pkg install android-tools
 
 # Ou configure SDK manualmente:
-tamk --setup
+tamk setup
 ```
 
 ### Problema: Arquivo muito grande ao clonar
@@ -209,7 +210,7 @@ pkg install screen
 screen -S tamk
 
 # Rodar TAMK
-tamk --dev
+tamk dev
 
 # Desconectar: Ctrl+A, depois D
 # Reconectar: screen -r tamk
@@ -221,18 +222,18 @@ tamk --dev
 # Adicionar à ~/.bashrc
 tamk_quick() {
     echo "🚀 TAMK Quick Menu"
-    echo "1) tamk --version"
-    echo "2) tamk --create"
-    echo "3) tamk --build"
-    echo "4) tamk --dev"
+    echo "1) tamk version"
+    echo "2) tamk create"
+    echo "3) tamk build"
+    echo "4) tamk dev"
     echo "5) tamk --help"
     read -p "Escolha: " opt
     
     case $opt in
-        1) tamk --version ;;
-        2) tamk --create ;;
-        3) read -p "Senha: " pass && tamk --build -p "$pass" ;;
-        4) tamk --dev ;;
+        1) tamk version ;;
+        2) tamk create ;;
+        3) read -p "Senha: " pass && tamk build -p "$pass" ;;
+        4) tamk dev ;;
         5) tamk --help ;;
     esac
 }
@@ -244,39 +245,39 @@ tamk_quick() {
 
 ```bash
 # Rodar em background
-nohup tamk --dev &
+nohup tamk dev &
 
 # Ver processos
 ps aux | grep tamk
 
 # Matar processo
-pkill -f "tamk --dev"
+pkill -f "tamk dev"
 ```
 
-## 📦 Alternativa: Compilar Executável para ARM
+## 📦 Compilar o Binário Go para ARM
 
-Se realmente quiser um executável:
+Para compilar o binário Go diretamente no Termux:
 
 ```bash
-# 1. Instalar cross-compilation tools
-pkg install clang build-essential
+# 1. Instalar Go
+pkg install golang
 
-# 2. Usar PyInstaller com target ARM
-# (Avançado - requer configuração complexa)
+# 2. Compilar o binário
+cd ~/tamk
+go build -o bin/tamk ./cmd/tamk
 
-# 3. Ou usar Buildozer (recomendado para Android)
-pip install buildozer
-buildozer android debug
+# 3. Adicionar ao PATH
+export PATH="$HOME/tamk/bin:$PATH"
 ```
 
-**Nota**: Este método é mais complexo, não recomendado para iniciantes.
+**Nota**: O binário compilado será para ARM64 (arquitetura do Termux).
 
 ## 📚 Próximas Ações
 
-1. ✅ Instale Python e dependências
+1. ✅ Instale Go e dependências
 2. ✅ Clone ou baixe TAMK
-3. ✅ Configure o alias
-4. ✅ Execute `tamk --create`
+3. ✅ Compile o binário com `go build`
+4. ✅ Execute `tamk create`
 5. ✅ Desenvolva seu projeto Android!
 
 ## 🔗 Recursos Úteis

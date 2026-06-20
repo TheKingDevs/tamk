@@ -39,7 +39,7 @@ sudo ./install.sh
 
 ```bash
 # Testar versão
-tamk --version
+tamk version
 
 # Ver ajuda
 tamk --help
@@ -61,16 +61,16 @@ Após a instalação, você pode usar TAMK em qualquer terminal:
 
 ```bash
 # Criar novo projeto
-tamk --create
+tamk create
 
 # Compilar projeto atual
-tamk --build -p sua-senha
+tamk build -p sua-senha
 
 # Instalar APK no dispositivo
-tamk --install
+tamk install
 
 # Modo desenvolvimento com live reload
-tamk --dev
+tamk dev
 
 # Ver opções
 tamk --help
@@ -97,7 +97,7 @@ Para atualizar para uma versão mais recente:
 
 ```bash
 # Verificar atualizações disponíveis
-tamk --update
+tamk update
 
 # Ou reinstalar manualmente
 sudo rm -rf /opt/tamk /usr/local/bin/tamk
@@ -136,7 +136,7 @@ sudo ./install.sh
 
 ```bash
 # Tente com caminho completo
-/usr/local/bin/tamk --version
+/usr/local/bin/tamk version
 
 # Se funcionar, adicione ao PATH em ~/.bashrc ou ~/.zshrc
 export PATH="/usr/local/bin:$PATH"
@@ -154,7 +154,7 @@ export PATH="/usr/local/bin:$PATH"
 
 Se encontrar problemas:
 
-1. Verifique a versão: `tamk --version`
+1. Verifique a versão: `tamk version`
 2. Veja os logs: `tamk --verbose --help`
 3. Consulte a documentação: `/opt/tamk/README.md`
 4. Reporte issues em: https://github.com/Shadw-Developer/tamk/issues

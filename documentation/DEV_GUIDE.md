@@ -1,89 +1,301 @@
-> Este guia prático aborda o fluxo de trabalho para desenvolver e implantar WebApps usando o T.A.M.K, desde a configuração inicial até a preparação para distribuição.
+# ⚙️ Guia de Desenvolvimento
+
+> Guia prático de fluxo de trabalho para desenvolver WebApps com T.A.M.K — da configuração ao deployment.
+
+---
+
+## 📋 Índice
+
+- [1. Ambiente de Desenvolvimento](#1-ambiente-de-desenvolvimento)
+- [2. Ciclo de Vida de um WebApp](#2-ciclo-de-vida-de-um-webapp)
+- [3. Modo Desenvolvimento com HMR](#3-modo-desenvolvimento-com-hmr)
+- [4. Debugging](#4-debugging)
+- [5. Customização Nativa](#5-customização-nativa)
+- [6. Build e Deploy](#6-build-e-deploy)
+- [7. CI/CD e Automação](#7-cicd-e-automação)
+
+---
 
 ## 1. Ambiente de Desenvolvimento
 
-O T.A.M.K foi projetado para ter o mínimo de dependências externas, mas uma configuração inicial correta é essencial.
+### Instalação
 
-### Instalação e Verificação
+```bash
+bash setup-install.sh
+tamk version
+```
 
-O script `setup-install.sh` é a maneira recomendada de instalar o T.A.M.K. Ele automatiza as seguintes etapas:
+### Verificação do Ambiente
 
-1.  **Verificação de Dependências**: Garante que pacotes como `python`, `openjdk-21`, `aapt2`, e `apksigner` estejam presentes no ambiente Termux.
-2.  **Cópia dos Arquivos**: Move o código-fonte do T.A.M.K para um diretório padronizado (`$PREFIX/opt/tamk`).
-3.  **Criação do Link Simbólico**: Cria um executável global em `$PREFIX/bin/tamk`, permitindo que você chame o kit de qualquer lugar no seu sistema.
+```bash
+tamk setup  # Configura SDK e keystore de debug
+```
 
-Após a instalação, sempre execute `tamk --version` para confirmar que o ambiente está configurado corretamente.
+### Estrutura de um Projeto WebApp
 
-### Configuração do Projeto
+```
+MeuWebApp/
+├── src/main/assets/     ← Seu conteúdo web
+│   ├── index.html
+│   ├── css/
+│   ├── js/
+│   └── images/
+├── AndroidManifest.xml  ← Permissões e configurações
+├── tamk.config          ← Metadados do projeto
+└── secret/              ← Keystore (NÃO versionar)
+```
 
-Uma vez que um projeto é criado com `tamk --create`, ele se torna um ambiente autônomo. A etapa mais importante é a configuração da SDK local, que é feita automaticamente na primeira criação de projeto ou manualmente com `tamk --setup`.
-
-> **Nota de Segurança**: Cada projeto pode ter sua própria Keystore (`secret/project.keystore`), que é usada para assinar o APK. Se uma Keystore de projeto não for encontrada, o T.A.M.K utilizará a Keystore de debug global. **Nunca compartilhe suas Keystores.**
+---
 
 ## 2. Ciclo de Vida de um WebApp
 
-O desenvolvimento de um WebApp com o T.A.M.K segue um ciclo simples e direto.
-
-### Passo 1: Criação
-
-Comece com o assistente interativo:
+### Fase 1: Criação
 
 ```bash
-tamk --create
+tamk create
+# → Escolha WebApp
+# → Nome, versão, autor, keystore
 ```
 
--   Escolha a opção **WebApp**.
--   Forneça as informações solicitadas (nome, pacote, autor, senha da Keystore).
+### Fase 2: Desenvolvimento
 
-### Passo 2: Desenvolvimento Web
-
-Esta é a fase principal. Navegue até o diretório do seu projeto recém-criado. Você encontrará a pasta `src/main/assets/`. **Este é o seu workspace.**
-
--   **Substitua ou modifique** o `index.html` de exemplo com o seu próprio site.
--   Você pode criar subdiretórios para organizar seus arquivos (`css/`, `js/`, `images/`). Todas as pastas e arquivos dentro de `assets/` serão incluídos no APK.
--   Desenvolva seu site como faria normalmente. O T.A.M.K simplesmente "empacota" este conteúdo.
-
-### Passo 3: Build e Teste
-
-Quando estiver pronto para testar seu WebApp em um dispositivo real, execute o processo de build:
+Edite arquivos em `src/main/assets/`:
 
 ```bash
-# Dentro do diretório do seu projeto
-tamk --build -p SUA_SENHA
+cd MeuWebApp
+nano src/main/assets/index.html
+nano src/main/assets/css/styles.css
+nano src/main/assets/js/app.js
 ```
 
-Este comando compila os recursos, empacota seus arquivos web, compila o código Kotlin do `WebView` e assina o APK. O resultado é o arquivo `app-final.apk`.
-
-Para instalar, use:
+**Dica:** Frameworks modernos (React, Vue, Angular) podem ser compilados para estático:
 
 ```bash
-tamk --install
+npm run build
+cp -r dist/* MeuWebApp/src/main/assets/
 ```
 
-## 3. Customização e Debugging
+### Fase 3: Modo Dev (HMR)
 
-### Customizando o Comportamento Nativo
+```bash
+tamk dev
+```
 
-Se você precisar alterar o comportamento do `WebView` (por exemplo, habilitar novas permissões, adicionar uma interface de JavaScript para comunicação entre a web e o nativo, etc.), você pode editar diretamente o arquivo `src/main/kotlin/com/example/seuwebapp/MainActivity.kt` no seu projeto gerado. Após a modificação, basta rodar o comando de build novamente.
+### Fase 4: Build de Produção
 
-### Debugging
+```bash
+tamk build -p SUA_SENHA
+```
 
-Debugging de WebApps pode ser desafiador. Aqui estão algumas dicas:
+### Fase 5: Instalação
 
--   **Alerts**: Use `alert('Minha variável: ' + minhaVariavel);` no seu JavaScript para inspecionar valores. O `WebChromeClient` configurado pelo T.A.M.K garante que os alertas funcionem.
--   **Console Remoto**: Para um debugging mais avançado, você pode habilitar o debugging remoto do `WebView`. Adicione o seguinte código ao método `onCreate` da sua `MainActivity.kt`:
+```bash
+tamk install
+```
 
-    ```kotlin
-    WebView.setWebContentsDebuggingEnabled(true);
-    ```
+---
 
-    Depois, conecte seu dispositivo ao computador via USB, abra o Google Chrome no desktop e navegue para `chrome://inspect`. Seu `WebView` deverá aparecer como um alvo inspecionável, dando acesso ao console, DOM e network.
+## 3. Modo Desenvolvimento com HMR
 
-## 4. Preparando para Deployment
+### Iniciar
 
-Antes de distribuir seu aplicativo, considere os seguintes pontos:
+```bash
+cd MeuWebApp
+tamk dev
+```
 
--   **Ícone do App**: Substitua os ícones padrão localizados em `res/mipmap/` por ícones personalizados.
--   **Versão do App**: Edite o arquivo `tamk.config` na raiz do seu projeto para incrementar o número da versão (`version=1.0.1`). Esta informação será usada no `AndroidManifest.xml` durante o próximo build.
--   **Build de Release**: O processo de build padrão já gera um APK assinado e alinhado (`zipalign`), que é considerado pronto para release. Não há uma distinção entre build de "debug" e "release" no fluxo atual do T.A.M.K, pois a senha da Keystore é sempre exigida.
--   **Ofuscação (ProGuard/R8)**: Atualmente, o T.A.M.K não integra ferramentas de ofuscação de código Kotlin. Para WebApps, a maior parte da sua lógica estará em JavaScript, que pode ser minificada e ofuscada usando ferramentas web padrão (como Webpack, Terser) antes de ser colocada na pasta `assets`.
+### Opções
+
+```bash
+tamk dev --verbose       # Logs detalhados
+```
+
+### Comportamento por Tipo de Arquivo
+
+| Arquivo | Ação | Tempo | Estado |
+| :--- | :--- | :--- | :--- |
+| `styles.css` | Logs only (HMR-ready) | < 50ms | ✅ Preservado |
+| `app.js` | Logs only (HMR-ready) | < 100ms | ✅ Preservado |
+| `data.json` | Logs only (HMR-ready) | < 50ms | ✅ Preservado |
+| `index.html` | Rebuild + reload | ~2-5s | ⚠️ Parcial |
+| `logo.png` | Rebuild + reload | ~2-5s | ⚠️ Parcial |
+
+*(HMR bridge injects a WebSocket client inline for future hot-reload support; currently logs changes only)*
+
+---
+
+## 4. Debugging
+
+### Console Remoto (Chrome DevTools)
+
+Habilite no `MainActivity.kt`:
+
+```kotlin
+WebView.setWebContentsDebuggingEnabled(true)  // Adicione no onCreate()
+```
+
+Conecte via USB → `chrome://inspect`
+
+### JavaScript Alerts
+
+```javascript
+alert('Valor: ' + minhaVariavel);
+```
+
+O `WebChromeClient` configurado exibe alerts nativamente.
+
+### Logs no Logcat
+
+```kotlin
+Log.d(TAG, "Mensagem de debug")
+```
+
+Visualize com:
+```bash
+adb logcat -s MainActivity
+```
+
+### Status do HMR
+
+Status é exibido no log durante execução do `tamk dev`:
+
+```
+Build status: monitoring src/main/assets/ (5 builds completed)
+```
+
+---
+
+## 5. Customização Nativa
+
+### Modificar o WebView
+
+Edite `src/main/kotlin/com/.../MainActivity.kt`:
+
+```kotlin
+webView.settings.apply {
+    javaScriptEnabled = true
+    domStorageEnabled = true
+    allowFileAccess = true
+    allowContentAccess = false        // Segurança
+    cacheMode = WebSettings.LOAD_DEFAULT
+    setSupportZoom(true)
+    builtInZoomControls = true
+    displayZoomControls = false
+}
+```
+
+### Adicionar Interface Nativa-JS
+
+```kotlin
+class WebAppInterface(private val context: Context) {
+    @JavascriptInterface
+    fun getDeviceInfo(): String {
+        return "Android ${Build.VERSION.RELEASE}"
+    }
+}
+
+webView.addJavascriptInterface(WebAppInterface(this), "Android")
+```
+
+No JavaScript:
+```javascript
+console.log(Android.getDeviceInfo());
+```
+
+### BroadcastReceiver para Refresh
+
+O template já inclui `BroadcastReceiver` para `tamk.ACTION_REFRESH_ASSET` e `tamk.ACTION_REFRESH_ALL`. Use:
+
+```bash
+adb shell am broadcast -a tamk.ACTION_REFRESH_ALL
+```
+
+---
+
+## 6. Build e Deploy
+
+### Build Completo
+
+```bash
+tamk build -p SUA_SENHA
+```
+
+Flags:
+| Flag | Efeito |
+| :--- | :--- |
+| `-p SENHA` | Fornece senha (evita prompt) |
+| `-V` | Modo verbose com logs de cada etapa |
+
+### Cache Inteligente
+
+O build é pulado se nada mudou:
+
+```
+✨ Nada mudou desde o último build. APK atualizado!
+```
+
+Force rebuild limpando o cache:
+```bash
+rm .build_cache
+```
+
+### APK Gerado
+
+| Arquivo | Propósito |
+| :--- | :--- |
+| `{name}-{version}-release.apk` | APK assinado e alinhado (produção) |
+| `{name}-{version}-dev.apk` | APK de desenvolvimento (dev mode) |
+
+### Instalação
+
+```bash
+# Via T.A.M.K
+tamk install
+
+# Via ADB (se configurado)
+adb install -r {name}-{version}-release.apk
+
+# Manual
+cp {name}-{version}-release.apk /sdcard/Download/
+```
+
+---
+
+## 7. CI/CD e Automação
+
+### Build Automatizado
+
+```bash
+tamk build -p $KEYSTORE_PASS
+```
+
+### Pipeline GitHub Actions (exemplo)
+
+```yaml
+- name: Build APK
+  run: |
+    cd projeto
+    tamk build -p ${{ secrets.KEYSTORE_PASS }}
+```
+
+### Requisitos para CI
+
+- Go 1.26+, OpenJDK 21, Kotlin
+- Android SDK tools (aapt2, apksigner, d8, zipalign)
+
+---
+
+## 🛡️ Boas Práticas
+
+1. **Keystore**: Uma por projeto, guarde em cofre seguro
+2. **Versionamento**: Incremente `tamk.config` antes de cada build
+3. **Cache**: Limpe `.build_cache` se houver erros estranhos
+4. **Backup**: `index.html.tamk_backup` é criado no modo dev
+5. **Teste**: Teste em dispositivo real antes de publicar
+6. **Segurança**: Desabilite `allowFileAccess` e `allowContentAccess` em produção se não necessário
+
+---
+
+<div align="center">
+  <sub>T.A.M.K v2026.3.0-HMR — Guia de Desenvolvimento</sub>
+</div>

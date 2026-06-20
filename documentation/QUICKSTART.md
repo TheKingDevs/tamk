@@ -1,182 +1,168 @@
-# 🚀 Guia Rápido de Início
+# 🚀 Quick Start Guide
 
-> Este guia o levará de zero a um WebApp funcionando em menos de 10 minutos.
+> This guide takes you from zero to a working WebApp in under 10 minutes.
 
 ---
 
-## 📥 Instalação
-
-### Pré-requisitos e Instalação do T.A.M.K
-
-Para instalar o T.A.M.K, siga as instruções detalhadas no README principal:
-
-👉 **[Veja a seção de Instalação no README.md](../README.md#-instalação-e-configuração)**
-
-**Resumo rápido:**
+## 📥 Installation
 
 ```bash
-# 1. Clone o repositório
+# 1. Clone the repository
 git clone https://github.com/Shadw-Developer/tamk.git
 cd tamk
 
-# 2. Execute o instalador automático
+# 2. Build the Go binary
+make build
+# or: go build -o bin/tamk ./cmd/tamk
+
+# 3. (Optional) Install globally
 bash setup-install.sh
 
-# 3. Verifique a instalação
-tamk --version
+# 4. Verify installation
+bin/tamk version
 ```
 
-> 💡 **Dica:** O instalador automático (`setup-install.sh`) configura tudo para você, incluindo dependências e variáveis de ambiente.
+> 💡 The Go binary is compiled to `bin/tamk`. The `setup-install.sh` script configures dependencies, installs the binary globally, and prepares the environment.
+
+**Manual dependencies (if needed):**
+```bash
+pkg install -y golang openjdk-21 kotlin wget zip apksigner aapt2 termux-tools git ncurses-utils toilet
+```
 
 ---
 
-## Passo 1: Criar um Projeto WebApp
-
-Inicie o assistente de criação de projetos:
+## Step 1: Create a WebApp
 
 ```bash
-tamk --create
+./tamk create
+# or use the installed binary: tamk create
 ```
 
-Quando solicitado, escolha a opção **WebApp** (geralmente a opção 3). Forneça as seguintes informações:
-
--   **Nome do Aplicativo**: `MeuPrimeiroWebApp`
--   **Versão**: `1.0.0` (ou deixe o padrão)
--   **Autor**: Seu nome
--   **Senha da Keystore**: Escolha uma senha segura e **anote-a**. Você precisará dela para fazer o build.
-
-O T.A.M.K criará a estrutura do projeto e baixará a SDK do Android. Isso pode levar alguns minutos na primeira vez.
+In the wizard:
+1. **Name**: `MyWebApp`
+2. **Author**: Your name
+3. **Version**: `1.0.0` (default)
+4. **Type**: Select `[3] WebApp (WebView + HTML/CSS/JS)`
+5. **Content mode**: `[1] Internal (assets/)`
+6. **Keystore password**: Create a password (min. 6 chars) and **save it**
 
 ---
 
-## Passo 2: Adicionar Seu Conteúdo Web
-
-Navegue até o diretório do projeto recém-criado:
+## Step 2: Add Web Content
 
 ```bash
-cd MeuPrimeiroWebApp
-```
-
-Abra a pasta `src/main/assets/` e edite o arquivo `index.html`:
-
-```bash
+cd MyWebApp
 nano src/main/assets/index.html
 ```
 
-Você pode modificar o HTML de exemplo ou substituí-lo completamente pelo seu próprio site. Para este guia rápido, vamos fazer uma pequena alteração:
+Replace with your HTML or edit the template. Example:
 
 ```html
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Primeiro WebApp</title>
+    <title>My WebApp</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-        h1 { font-size: 2.5em; margin-bottom: 10px; }
-        p { font-size: 1.2em; }
-        button {
-            margin-top: 20px;
-            padding: 15px 30px;
-            background-color: white;
-            color: #667eea;
-            border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
+        body { font-family: Arial; background: #121212; color: white;
+               display: flex; align-items: center; justify-content: center;
+               height: 100vh; margin: 0; }
+        h1 { font-size: 2.5em; }
+        button { padding: 15px 30px; background: #6200EE; color: white;
+                 border: none; border-radius: 8px; font-size: 18px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <h1>🎉 Olá, Mundo!</h1>
-    <p>Este é o meu primeiro WebApp criado com T.A.M.K</p>
-    <button onclick="alert('Você clicou no botão!')">Clique Aqui</button>
+    <h1>Hello, World!</h1>
+    <button onclick="alert('JS working!')">Click</button>
 </body>
 </html>
 ```
 
-Salve o arquivo (no `nano`, pressione `Ctrl+O`, depois `Enter`, e então `Ctrl+X` para sair).
-
 ---
 
-## Passo 3: Compilar o APK
-
-Agora, vamos compilar o projeto em um APK. Execute o comando de build, fornecendo a senha da Keystore que você definiu no Passo 1:
+## Step 3: Build APK
 
 ```bash
-tamk --build -p SUA_SENHA_AQUI
+tamk build -p YOUR_PASSWORD
 ```
 
-O T.A.M.K irá:
+The pipeline executes:
+1. ✅ Validate keystore password
+2. 🔍 Check build cache (SHA-256 hash)
+3. 🏗️ Compile resources (aapt2)
+4. ☕ Compile Kotlin
+5. 📦 Generate DEX (d8)
+6. ✍️ Sign + align (apksigner + zipalign)
 
-1.  Validar sua senha.
-2.  Compilar os recursos Android (ícones, estilos).
-3.  Empacotar seus arquivos web da pasta `assets/`.
-4.  Compilar o código Kotlin do `WebView`.
-5.  Gerar o arquivo DEX (código executável Android).
-6.  Assinar e alinhar o APK.
-
-Ao final, você verá a mensagem: `✅ SUCESSO: app-final.apk gerado corretamente!`
+**Expected output:**
+```
+✅ SUCCESS: {name}-{version}-release.apk generated successfully!
+📦 APK Size: 45.2 KB
+```
 
 ---
 
-## Passo 4: Instalar e Testar
-
-Com o APK gerado, instale-o no seu dispositivo:
+## Step 4: Install and Test
 
 ```bash
-tamk --install
+tamk install
 ```
 
-O Android abrirá o instalador de pacotes. Confirme a instalação. Após a conclusão, procure pelo ícone do aplicativo **MeuPrimeiroWebApp** na sua tela inicial ou gaveta de aplicativos.
-
-Abra o aplicativo. Você deverá ver a página HTML que você criou, com o gradiente roxo e o botão interativo. Clique no botão para testar a funcionalidade JavaScript.
+Android will open the installer. Confirm installation and open the app.
 
 ---
 
-## 🎯 Próximos Passos
+## Step 5: Development with HMR
 
-Parabéns! Você criou, compilou e instalou seu primeiro WebApp com o T.A.M.K. Agora você pode:
+```bash
+# In the project directory
+tamk dev
+```
 
-| Ação | Descrição |
-|------|-----------|
-| 🎨 **Explorar Frameworks** | Use React, Vue ou Angular. Compile para estático e copie para `src/main/assets/` |
-| 🖼️ **Personalizar o Ícone** | Substitua os arquivos em `res/mipmap/` por ícones personalizados |
-| 📄 **Adicionar Mais Páginas** | Crie navegação entre múltiplas páginas HTML |
-| ⚡ **Usar HMR** | Desenvolva com hot-reload usando `tamk --dev` |
-| 📚 **Ler a Documentação** | Consulte os guias avançados abaixo |
+Edit files in `src/main/assets/` and see changes in real time.
+
+| File | Behavior |
+| :--- | :--- |
+| `css/styles.css` | Instant hot reload without page reload |
+| `js/app.js` | Module injection without page reload |
+| `index.html` | Auto rebuild + reload |
+
+**Dev mode commands:**
+| Key | Action |
+| :--- | :--- |
+| `s` | Status (builds, clients, modules) |
+| `b` | Force rebuild |
+| `i` | Install APK |
+| `q` | Quit |
 
 ---
 
-## 📚 Continue Aprendendo
+## 🎯 Next Steps
 
-| Documento | Descrição |
-|-----------|-----------|
-| [🏗️ ARCHITECTURE.md](ARCHITECTURE.md) | Entenda como o T.A.M.K funciona internamente |
-| [⚙️ DEV_GUIDE.md](DEV_GUIDE.md) | Guia completo de desenvolvimento e customização |
-| [🔥 HMR_GUIDE.md](HMR_GUIDE.md) | Hot Module Replacement para desenvolvimento rápido |
-| [❓ FAQ.md](FAQ.md) | Perguntas frequentes e troubleshooting |
-| [📋 API_COMPONENTS.md](API_COMPONENTS.md) | Referência completa da API |
+| Action | Description |
+| :--- | :--- |
+| 🎨 **Use React/Vue** | Compile to static and copy to `assets/` |
+| 🖼️ **Customize icon** | Edit `res/drawable/ic_launcher.xml` |
+| 📄 **Remote URL** | Create project with external URL mode |
+| 🔄 **Update** | `tamk update` to check for new versions |
+| ❓ **Help** | Check the [FAQ](FAQ.md) |
+
+---
+
+## 📚 Related Documentation
+
+| Document | Description |
+| :--- | :--- |
+| [🏗️ ARCHITECTURE.md](ARCHITECTURE.md) | How T.A.M.K works internally |
+| [⚙️ DEV_GUIDE.md](DEV_GUIDE.md) | Complete development guide |
+| [🔥 HMR_SYSTEM.md](HMR_SYSTEM.md) | Advanced Hot Module Replacement |
+| [📋 API_COMPONENTS.md](API_COMPONENTS.md) | API reference |
+| [❓ FAQ.md](FAQ.md) | Frequently asked questions |
 
 ---
 
 <div align="center">
-
-**Feito com ❤️ por @mrx_dev**
-
-[Dokumentação Principal](../README.md) • [GitHub](https://github.com/Shadw-Developer/tamk)
-
+  <sub>Made with ❤️ by @mrx_dev</sub>
 </div>

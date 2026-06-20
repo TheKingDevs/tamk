@@ -77,7 +77,7 @@ Duplo clique em `install.bat` → **Executar como Administrador**
 Abra um novo **Command Prompt** ou **PowerShell**:
 
 ```cmd
-tamk --version
+tamk version
 tamk --help
 ```
 
@@ -95,13 +95,13 @@ Após a instalação:
 
 ```cmd
 REM Criar novo projeto
-tamk --create
+tamk create
 
 REM Compilar projeto
-tamk --build -p sua-senha
+tamk build -p sua-senha
 
 REM Modo desenvolvimento
-tamk --dev
+tamk dev
 
 REM Ver opções
 tamk --help
@@ -132,7 +132,7 @@ rmdir /s /q "%USERPROFILE%\.tamk"
 
 ```cmd
 REM Verificar atualizações
-tamk --update
+tamk update
 
 REM Ou reinstalar manualmente
 REM 1. Desinstale a versão atual
@@ -210,7 +210,7 @@ sudo ./install.sh
 
 Se encontrar problemas:
 
-1. Verifique a versão: `tamk --version`
+1. Verifique a versão: `tamk version`
 2. Use PowerShell em vez de Command Prompt
 3. Execute como Administrador
 4. Consulte: `C:\Program Files\TAMK\README.md`
