@@ -193,6 +193,7 @@ tamk/
 │   │   ├── console/                 # 1 template
 │   │   └── ui_apk/                  # 6 templates
 │   └── images/logo.png
+├── PRD/                             # Product requirements docs
 ├── documentation/                   # 23 markdown docs
 ├── bin/                             # Compiled binary output
 │   └── tamk                         # Go binary

@@ -111,6 +111,7 @@ tamk/                                    # Project root
 ├── bin/                               # Compiled binary output
 │   └── tamk                           # Go binary
 │
+├── PRD/                               # Product requirements (workflow.md)
 ├── documentation/                     # Documentation (23 files)
 │   ├── ARCHITECTURE.md                # Architecture and data flow
 │   ├── API_COMPONENTS.md              # Package/module reference
