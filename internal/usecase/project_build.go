@@ -12,6 +12,7 @@ import (
 	"github.com/TheKingDevs/tamk/internal/config"
 	"github.com/TheKingDevs/tamk/internal/domain/entity"
 	"github.com/TheKingDevs/tamk/internal/domain/repository"
+	"github.com/TheKingDevs/tamk/internal/tools"
 	"github.com/TheKingDevs/tamk/pkg/errors"
 	"github.com/TheKingDevs/tamk/pkg/logger"
 )
@@ -25,6 +26,7 @@ type BuildProjectUseCase struct {
 	cfg       *config.Config
 	buildRepo repository.BuildRepository
 	projRepo  repository.ProjectRepository
+	tools     tools.ToolManager
 }
 
 func NewBuildProjectUseCase(
@@ -32,10 +34,16 @@ func NewBuildProjectUseCase(
 	buildRepo repository.BuildRepository,
 	projRepo repository.ProjectRepository,
 ) *BuildProjectUseCase {
+	toolMgr := tools.New(tools.Config{
+		DevDir:  cfg.DevDir,
+		SDKPath: cfg.SDKPath,
+	})
+
 	return &BuildProjectUseCase{
 		cfg:       cfg,
 		buildRepo: buildRepo,
 		projRepo:  projRepo,
+		tools:     toolMgr,
 	}
 }
 
@@ -137,12 +145,19 @@ func (uc *BuildProjectUseCase) AssetsOnlyBuild(ctx context.Context, input BuildI
 		keystorePath = uc.cfg.Keystore
 	}
 
-	signCmd := exec.CommandContext(ctx, "apksigner", "sign",
+	apksignerPath, err := uc.tools.ApkSigner(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("apksigner not available: %w", err)
+	}
+
+	signArgs := strings.Fields(apksignerPath)
+	signArgs = append(signArgs, "sign",
 		"--ks", keystorePath,
 		"--ks-pass", "pass:"+input.Password,
 		"--out", devAPK+".signed",
 		devAPK,
 	)
+	signCmd := exec.CommandContext(ctx, signArgs[0], signArgs[1:]...)
 	if err := uc.execute(signCmd); err != nil {
 		return nil, fmt.Errorf("failed to sign APK: %w", err)
 	}
@@ -161,8 +176,41 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 	finalPath := filepath.Join(projPath, finalName)
 	resZip := filepath.Join(projPath, "res.zip")
 	objDir := filepath.Join(projPath, "obj")
+
+	// Resolve tool paths via ToolManager
+	aapt2Path, err := uc.tools.AAPT2(ctx)
+	if err != nil {
+		return failedResult(entity.BuildPhaseAAPT2Compile, err.Error())
+	}
+
+	kotlincPath, err := uc.tools.KotlinCompiler(ctx)
+	if err != nil {
+		return failedResult(entity.BuildPhaseKotlinCompile, err.Error())
+	}
+
+	d8Path, err := uc.tools.D8(ctx)
+	if err != nil {
+		return failedResult(entity.BuildPhaseD8, err.Error())
+	}
+
+	zipalignPath, err := uc.tools.Zipalign(ctx)
+	if err != nil {
+		return failedResult(entity.BuildPhaseZipalign, err.Error())
+	}
+
+	apksignerPath, err := uc.tools.ApkSigner(ctx)
+	if err != nil {
+		return failedResult(entity.BuildPhaseApkSign, err.Error())
+	}
+
+	sdkPath, err := uc.tools.SDKJar()
+	if err != nil {
+		return failedResult(entity.BuildPhaseAAPT2Link, err.Error())
+	}
+
+	// Build pipeline
 	logger.Step("Compiling resources (AAPT2)...")
-	if out, err := uc.executeOutput(exec.CommandContext(ctx, "aapt2", "compile", "--dir",
+	if out, err := uc.executeOutput(exec.CommandContext(ctx, aapt2Path, "compile", "--dir",
 		filepath.Join(projPath, "res"), "-o", resZip)); err != nil {
 		return failedResult(entity.BuildPhaseAAPT2Compile, string(out))
 	}
@@ -172,7 +220,7 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 	os.MkdirAll(genDir, 0o755)
 	linkArgs := []string{
 		"link",
-		"-I", uc.cfg.SDKPath,
+		"-I", sdkPath,
 		"--manifest", filepath.Join(projPath, "AndroidManifest.xml"),
 		"-o", apkPath,
 		"--java", genDir,
@@ -183,7 +231,7 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 	if info, err := os.Stat(assetsDir); err == nil && info.IsDir() {
 		linkArgs = append(linkArgs, "-A", assetsDir)
 	}
-	if out, err := uc.executeOutput(exec.CommandContext(ctx, "aapt2", linkArgs...)); err != nil {
+	if out, err := uc.executeOutput(exec.CommandContext(ctx, aapt2Path, linkArgs...)); err != nil {
 		return failedResult(entity.BuildPhaseAAPT2Link, string(out))
 	}
 
@@ -191,9 +239,9 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 
 	logger.Step("Compiling Kotlin sources...")
 	os.MkdirAll(objDir, 0o755)
-	kotlinCmd := exec.CommandContext(ctx, "kotlinc",
+	kotlinCmd := exec.CommandContext(ctx, kotlincPath,
 		kotlinDir, genDir,
-		"-cp", uc.cfg.SDKPath,
+		"-cp", sdkPath,
 		"-d", objDir,
 	)
 	if out, err := uc.executeOutput(kotlinCmd); err != nil {
@@ -211,9 +259,9 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 	if len(classFiles) == 0 {
 		return failedResult(entity.BuildPhaseD8, "no .class files found in "+objDir)
 	}
-	args := []string{"--lib", uc.cfg.SDKPath, "--release", "--output", projPath}
+	args := []string{"--lib", sdkPath, "--release", "--output", projPath}
 	args = append(args, classFiles...)
-	d8Cmd := exec.CommandContext(ctx, "d8", args...)
+	d8Cmd := exec.CommandContext(ctx, d8Path, args...)
 	if out, err := uc.executeOutput(d8Cmd); err != nil {
 		return failedResult(entity.BuildPhaseD8, string(out))
 	}
@@ -225,7 +273,7 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 	}
 
 	logger.Step("Aligning (zipalign)...")
-	if out, err := uc.executeOutput(exec.CommandContext(ctx, "zipalign", "-f", "4", apkPath, unsignedPath)); err != nil {
+	if out, err := uc.executeOutput(exec.CommandContext(ctx, zipalignPath, "-f", "4", apkPath, unsignedPath)); err != nil {
 		return failedResult(entity.BuildPhaseZipalign, string(out))
 	}
 
@@ -235,12 +283,14 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 	}
 
 	logger.Step("Signing APK...")
-	signCmd := exec.CommandContext(ctx, "apksigner", "sign",
+	signArgs := strings.Fields(apksignerPath)
+	signArgs = append(signArgs, "sign",
 		"--ks", keystorePath,
 		"--ks-pass", "pass:"+input.Password,
 		"--out", finalPath,
 		unsignedPath,
 	)
+	signCmd := exec.CommandContext(ctx, signArgs[0], signArgs[1:]...)
 	if out, err := uc.executeOutput(signCmd); err != nil {
 		return failedResult(entity.BuildPhaseApkSign, string(out))
 	}
@@ -298,7 +348,7 @@ func (uc *BuildProjectUseCase) executeOutput(cmd *exec.Cmd) ([]byte, error) {
 
 func failedResult(phase entity.BuildPhase, msg string) *entity.BuildResult {
 	err := &errors.BuildError{Phase: string(phase), Err: fmt.Errorf("%s", msg)}
-	logger.Error("Build failed", "phase", string(phase), "error", msg)
+	logger.Error("Build failed", "phase", string(phase), "error", err)
 	return &entity.BuildResult{
 		Success:  false,
 		Phase:    phase,

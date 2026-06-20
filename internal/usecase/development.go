@@ -83,7 +83,7 @@ func (uc *DevModeUseCase) Start(ctx context.Context, projectPath, password strin
 
 	logger.Success("Dev mode started")
 	logger.Info("Watching for changes", "dir", uc.assetsDir)
-	logger.Info("Commands: b=rebuild, i=install, s=status, h=help, q=quit")
+	logger.Info("Press Ctrl+C to stop")
 
 	return nil
 }
@@ -146,20 +146,10 @@ func (uc *DevModeUseCase) installAPK() {
 	p := uc.projectPath
 	uc.mu.Unlock()
 
-	pattern := filepath.Join(p, "*-release.apk")
-	matches, _ := filepath.Glob(pattern)
-	apkPath := ""
-	if len(matches) > 0 {
-		apkPath = matches[0]
-	} else {
-		devPattern := filepath.Join(p, "*-dev.apk")
-		devMatches, _ := filepath.Glob(devPattern)
-		if len(devMatches) > 0 {
-			apkPath = devMatches[0]
-		} else {
-			logger.Error("No APK found to install")
-			return
-		}
+	apkPath := uc.findAPK(p)
+	if apkPath == "" {
+		logger.Error("No APK found to install")
+		return
 	}
 
 	cmd := exec.Command("adb", "install", "-r", apkPath)
@@ -168,6 +158,16 @@ func (uc *DevModeUseCase) installAPK() {
 	} else {
 		logger.Success("APK installed")
 	}
+}
+
+func (uc *DevModeUseCase) findAPK(projectPath string) string {
+	for _, pattern := range []string{"*-release.apk", "*-dev.apk"} {
+		matches, _ := filepath.Glob(filepath.Join(projectPath, pattern))
+		if len(matches) > 0 {
+			return matches[0]
+		}
+	}
+	return ""
 }
 
 func (uc *DevModeUseCase) injectDevBridge() error {

@@ -213,7 +213,7 @@ func (uc *InstallUseCase) FindAPKs(projectPath string) []string {
 		return nil
 	}
 	for _, e := range entries {
-		if !e.IsDir() && (strings.HasSuffix(e.Name(), ".apk")) {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".apk") {
 			apks = append(apks, filepath.Join(projectPath, e.Name()))
 		}
 	}

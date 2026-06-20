@@ -141,8 +141,10 @@ func (c *Config) GetTemplateDir(projectType string) string {
 
 	cwd, _ := os.Getwd()
 	candidates := []string{
+		filepath.Join(c.TAMKHome, "templates", projectType),
 		filepath.Join(c.TAMKHome, "assets", "templates", projectType),
 		filepath.Join(c.TAMKHome, "src", "templates", projectType),
+		filepath.Join(cwd, "templates", projectType),
 		filepath.Join(cwd, "assets", "templates", projectType),
 	}
 
@@ -154,14 +156,16 @@ func (c *Config) GetTemplateDir(projectType string) string {
 	}
 
 	if c.Env == EnvTermux {
-		termuxPath := filepath.Join("/data/data/com.termux/files/usr", "opt", "tamk", "assets", "templates", projectType)
-		if info, err := os.Stat(termuxPath); err == nil && info.IsDir() {
-			templateDirCache.Store(projectType, termuxPath)
-			return termuxPath
+		for _, p := range []string{"templates", filepath.Join("assets", "templates")} {
+			termuxPath := filepath.Join("/data/data/com.termux/files/usr", "opt", "tamk", p, projectType)
+			if info, err := os.Stat(termuxPath); err == nil && info.IsDir() {
+				templateDirCache.Store(projectType, termuxPath)
+				return termuxPath
+			}
 		}
 	}
 
-	result := filepath.Join(c.TAMKHome, "assets", "templates", projectType)
+	result := filepath.Join(c.TAMKHome, "templates", projectType)
 	templateDirCache.Store(projectType, result)
 	return result
 }
