@@ -58,14 +58,12 @@ window.App = {
   },
 
   registerHMR() {
-    // Cada módulo tem seu próprio handler HMR
-    TAMK_HMR.accept('js/modules/cart.js', (update) => {
-      this.saveModuleState('cart');
-      eval(update.newContent);
-      this.modules.cart = new Cart();
-      this.restoreModuleState('cart');
-      this.updateCartUI();
-    });
+    // Exemplo conceitual (HMR bridge ainda em desenvolvimento)
+    // O bridge atual injeta WebSocket client que escuta reload/css-update
+    ws.onmessage = function(e) {
+      var msg = JSON.parse(e.data);
+      if (msg.type === 'reload') { location.reload(); }
+    };
   },
 
   saveModuleState(name) {

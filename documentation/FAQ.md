@@ -93,7 +93,6 @@ Remova `.build_cache` para forçar rebuild.
 ### Modo dev não inicia?
 
 ```bash
-pip install watchdog websockets
 tamk build -p senha  # Precisa de APK base primeiro
 ```
 

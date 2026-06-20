@@ -172,7 +172,7 @@ chmod +x ~/tamk/bin/tamk
 
 ```bash
 # Solução: Instalar OpenJDK no Termux
-pkg install openjdk-17
+pkg install openjdk-21
 
 # Verificar
 java -version

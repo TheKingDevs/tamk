@@ -112,7 +112,7 @@ tamk/                                    # Project root
 │   └── tamk                           # Go binary
 │
 ├── PRD/                               # Product requirements (workflow.md)
-├── documentation/                     # Documentation (23 files)
+├── documentation/                     # Documentation (21 .md + 1 .txt)
 │   ├── ARCHITECTURE.md                # Architecture and data flow
 │   ├── API_COMPONENTS.md              # Package/module reference
 │   ├── DEV_GUIDE.md                   # Development guide

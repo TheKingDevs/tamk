@@ -20,8 +20,6 @@ import (
 var (
 	verbose  bool
 	password string
-	noWS     bool
-	wsPort   int
 )
 
 func NewRootCmd() *cobra.Command {
@@ -51,8 +49,7 @@ func NewRootCmd() *cobra.Command {
 
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "V", false, "Debug-level logging")
 	cmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Keystore password")
-	cmd.PersistentFlags().BoolVar(&noWS, "no-ws", false, "Disable WebSocket (HTTP fallback)")
-	cmd.PersistentFlags().IntVar(&wsPort, "ws-port", 8765, "WebSocket port")
+
 
 	cmd.AddCommand(newCreateCmd(createUC))
 	cmd.AddCommand(newBuildCmd(buildUC, projRepo))

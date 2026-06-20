@@ -194,7 +194,7 @@ tamk/
 │   │   └── ui_apk/                  # 6 templates
 │   └── images/logo.png
 ├── PRD/                             # Product requirements docs
-├── documentation/                   # 23 markdown docs
+├── documentation/                   # 21 markdown docs + VERSIONING.txt
 ├── bin/                             # Compiled binary output
 │   └── tamk                         # Go binary
 ├── tests/                           # Test fixture data (DupTest, TestConsole, TestWebApp)
@@ -373,8 +373,7 @@ For HTML hot-reload without full rebuild:
 - `SanitizePath()` blocks path traversal (`[;&|`$]`, `..`)
 - Commands use `exec.Command()` (list-based, no shell=True equivalent)
 - Passwords redacted in logs (`--ks-pass [REDACTED]`)
-- `ValidateKeystorePassword()` pre-validates before build
-- Password cleared from memory after use (`clear` slice)
+- Password validated inline (min 6 chars) before build
 - 10-minute timeout on full build, 5-minute on assets build
 
 ---
@@ -573,7 +572,7 @@ ASCII art logo loaded and rendered during `tamk create` and `tamk version`.
 | Component | Description |
 | :--- | :--- |
 | `Print(url string)` | Render QR code in terminal using Unicode block chars |
-| `PrintWithFrame(url string)` | Render QR code with ASCII frame border |
+| `PrintTerminal(url string)` | Render QR code in terminal using Unicode block chars |
 
 ### Errors (`pkg/errors/errors.go`)
 
@@ -644,10 +643,10 @@ make setup  # Includes: git config core.hooksPath .githooks
 ### Security Measures
 
 - **Path sanitization**: All user-supplied paths are sanitized (path traversal blocked, special chars filtered)
-- **Password handling**: Zeroed after use (`clear` byte slice), never logged, redacted in error output
+- **Password handling**: Never logged, redacted in error output (`--ks-pass [REDACTED]`)
 - **Subprocess safety**: `exec.Command()` list-based (no shell interpolation), shell=True equivalent never used
 - **File permissions**: Keystore files set to `0o600` (owner read/write only)
-- **SDK validation**: SHA-256 hash verification on downloaded SDK
+- **SDK validation**: Ensured via download from canonical source; SHA-256 used for source change detection (build cache)
 - **Keystore isolation**: Per-project keystore (`secret/project.keystore`) with debug fallback
 - **Input validation**: Project names, versions, packages validated via value objects before creation
 

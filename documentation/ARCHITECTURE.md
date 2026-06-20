@@ -267,10 +267,10 @@ type Config struct {
 
 ## 📈 Metrics
 
-- **Go source files**: 39 modules
-- **Test files**: 9 (`*_test.go`)
-- **Templates**: 20 `.tmpl` files
-- **Documentation**: 23 `.md` files
+- **Go source files**: 33 modules
+- **Test files**: 11 (`*_test.go`)
+- **Templates**: 19 `.tmpl` files
+- **Documentation**: 21 `.md` files + VERSIONING.txt
 - **Lines of code**: ~3,500 Go, ~300 Kotlin (templates)
 - **Go version**: 1.26.3
 

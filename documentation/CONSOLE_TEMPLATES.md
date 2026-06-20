@@ -28,10 +28,10 @@ fun main() {
 
 ```bash
 # No diretório do projeto Console
-tamk --run
+tamk run
 
 # Ou arquivo específico
-tamk --run src/MeuScript.kt
+tamk run src/MeuScript.kt
 ```
 
 ---

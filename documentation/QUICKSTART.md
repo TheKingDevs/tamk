@@ -125,9 +125,9 @@ Edit files in `src/main/assets/` and see changes in real time.
 
 | File | Behavior |
 | :--- | :--- |
-| `css/styles.css` | Instant hot reload without page reload |
-| `js/app.js` | Module injection without page reload |
-| `index.html` | Auto rebuild + reload |
+| `css/styles.css` | Change logged (HMR-ready, WS server pending) |
+| `js/app.js` | Change logged (HMR-ready, WS server pending) |
+| `index.html` | Triggers full assets rebuild + APK re-sign + install |
 
 **Dev mode commands:**
 | Key | Action |

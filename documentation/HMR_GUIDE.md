@@ -6,17 +6,17 @@
 
 ## Visão Geral
 
-HMR permite atualizar módulos JS/CSS/JSON em tempo real **sem recarregar a página** e **preservando o estado**.
+HMR permite desenvolvimento iterativo com feedback rápido. O sistema monitora arquivos em `src/main/assets/` e reconstroi o APK automaticamente.
 
 ### Fluxo
 
 ```
-Developer → TAMK Dev (WebSocket) → WebView
-  1. Edita arquivo
-  2. Detecta mudança
-  3. Envia update
-  4. Aplica módulo
-  5. Preserva estado
+Developer → File Watcher → Assets Build → ADB Install → WebView
+  1. Edita arquivo em assets/
+  2. fsnotify detecta mudança
+  3. AssetsOnlyBuild() reconstroi APK (extrai + troca assets + re-assina)
+  4. ADB instala APK atualizado
+  5. Broadcast ACTION_REFRESH para WebView recarregar
 ```
 
 ### Tipos

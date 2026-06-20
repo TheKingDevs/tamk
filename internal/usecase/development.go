@@ -18,8 +18,6 @@ import (
 	"github.com/Shadw-Developer/tamk/pkg/watcher"
 )
 
-var _ = os.ReadFile
-
 type DevModeUseCase struct {
 	cfg      *config.Config
 	buildUC  *BuildProjectUseCase

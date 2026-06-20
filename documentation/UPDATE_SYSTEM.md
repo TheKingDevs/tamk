@@ -51,12 +51,10 @@ tamk update
 - TTL: 6 horas
 - Ignorado em `update` ou se corrompido
 
-### Métodos de Atualização
+### Update Methods (auto-detected)
 
-| Método | Comando | Detecção |
-| :--- | :--- | :--- |
-| **Git** | `git pull --rebase --autostash` | Pasta `.git` existe |
-| **go install** | `go install github.com/Shadw-Developer/tamk/cmd/tamk@latest` | `go` disponível |
+1. **git**: `git pull --rebase --autostash` in TAMK_HOME
+2. **go install**: `go install github.com/Shadw-Developer/tamk/cmd/tamk@latest`
 
 ### Fluxo
 
