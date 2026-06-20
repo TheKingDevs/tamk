@@ -8,9 +8,15 @@ T.A.M.K (Termux APK Manager Kit) v2026.3.0-HMR — framework de automacao para d
 
 <p align="center">
   <img src="https://img.shields.io/badge/Version-2026.3.0--HMR-blueviolet?style=for-the-badge" alt="Version">
-  <img src="https://img.shields.io/badge/Platform-Termux/Android-orange?style=for-the-badge" alt="Platform">
-  <img src="https://img.shields.io/badge/Language-Go%20%26%20Kotlin-blue?style=for-the-badge" alt="Languages">
+  <img src="https://img.shields.io/badge/Go-1.26-blue?style=for-the-badge&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/github/actions/workflow/status/TheKingDevs/tamk/ci.yml?style=for-the-badge&label=CI" alt="CI">
+  <br>
+  <img src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux">
+  <img src="https://img.shields.io/badge/Termux-000?style=for-the-badge&logo=terminal&logoColor=white" alt="Termux">
+  <img src="https://img.shields.io/badge/macOS-000?style=for-the-badge&logo=apple" alt="macOS">
+  <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows" alt="Windows">
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
 </p>
 
 ---

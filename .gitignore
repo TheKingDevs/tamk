@@ -43,6 +43,7 @@ opencode.json
 .gemini/
 .claude/
 .qwen/
+.mimo/
 .windsurf/
 .copilot/
 .aider/
