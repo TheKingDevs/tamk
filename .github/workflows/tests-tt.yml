@@ -1,0 +1,119 @@
+name: Tests T2T (Doc-Code Audit)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'AGENTS.md'
+      - 'documentation/**'
+      - 'internal/**/*.go'
+      - 'pkg/**/*.go'
+      - 'templates/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'AGENTS.md'
+      - 'documentation/**'
+      - 'internal/**/*.go'
+      - 'pkg/**/*.go'
+      - 'templates/**'
+  schedule:
+    - cron: '0 6 * * 1' # Every Monday at 6am UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  doc-audit:
+    name: Doc-Code Cross-Verification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: Verify entity types
+        run: |
+          echo "=== Checking entity types in code vs AGENTS.md ==="
+          CODE_COUNT=$(grep -r "^type.*struct\|^type.*string\|^type.*int" internal/domain/entity/ | wc -l)
+          echo "Entity types in code: $CODE_COUNT"
+          if [ "$CODE_COUNT" -lt 10 ]; then
+            echo "ERROR: Expected at least 10 entity types, found $CODE_COUNT"
+            exit 1
+          fi
+
+      - name: Verify error sentinels
+        run: |
+          echo "=== Checking error sentinels ==="
+          ERROR_COUNT=$(grep -c "^	Err\|^type BuildError" pkg/errors/errors.go)
+          echo "Error sentinels in code: $ERROR_COUNT"
+          if [ "$ERROR_COUNT" -lt 15 ]; then
+            echo "ERROR: Expected at least 15 error sentinels, found $ERROR_COUNT"
+            exit 1
+          fi
+
+      - name: Verify watcher extensions
+        run: |
+          echo "=== Checking watcher extensions ==="
+          EXT_COUNT=$(grep -o '\"\.[a-z]*\"' pkg/watcher/watcher.go | grep -v "git\|idea\|cache\|secret" | wc -l)
+          echo "Watch extensions: $EXT_COUNT"
+          if [ "$EXT_COUNT" -lt 10 ]; then
+            echo "ERROR: Expected at least 10 watch extensions, found $EXT_COUNT"
+            exit 1
+          fi
+
+      - name: Verify template files exist
+        run: |
+          echo "=== Checking template files ==="
+          WEBAPP_TEMPLATES=$(find templates/webapp -name "*.tmpl" | wc -l)
+          CONSOLE_TEMPLATES=$(find templates/console -name "*.tmpl" | wc -l)
+          UIAPK_TEMPLATES=$(find templates/ui_apk -name "*.tmpl" | wc -l)
+          echo "Webapp: $WEBAPP_TEMPLATES, Console: $CONSOLE_TEMPLATES, UI APK: $UIAPK_TEMPLATES"
+          TOTAL=$((WEBAPP_TEMPLATES + CONSOLE_TEMPLATES + UIAPK_TEMPLATES))
+          if [ "$TOTAL" -lt 15 ]; then
+            echo "ERROR: Expected at least 15 templates, found $TOTAL"
+            exit 1
+          fi
+
+      - name: Verify documentation files
+        run: |
+          echo "=== Checking documentation files ==="
+          DOC_COUNT=$(find documentation -name "*.md" | wc -l)
+          echo "Documentation files: $DOC_COUNT"
+          if [ "$DOC_COUNT" -lt 20 ]; then
+            echo "ERROR: Expected at least 20 documentation files, found $DOC_COUNT"
+            exit 1
+          fi
+
+      - name: Verify version consistency
+        run: |
+          echo "=== Checking version consistency ==="
+          CONFIG_VERSION=$(grep 'Version = ' internal/config/config.go | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          AGENTS_VERSION=$(grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+-[A-Z]*' AGENTS.md | head -1 | sed 's/^v//')
+          echo "Config version: $CONFIG_VERSION"
+          echo "AGENTS version: $AGENTS_VERSION"
+          if [ "$CONFIG_VERSION" != "$AGENTS_VERSION" ]; then
+            echo "WARNING: Version mismatch between config.go and AGENTS.md"
+          fi
+
+      - name: Verify Go code compiles
+        run: go build ./cmd/tamk
+
+      - name: Verify tests pass
+        run: go test -short ./...
+
+  notify:
+    name: Notify on Failure
+    needs: doc-audit
+    if: failure()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Report failure
+        run: |
+          echo "::error::Doc-Code audit failed. Please check AGENTS.md and documentation/ for discrepancies."

@@ -2,31 +2,91 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'documentation/**'
+      - '.agents/**'
   pull_request:
-    branches: [ main ]
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.26'
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version: '1.26'
+          cache: true
 
-    - name: Tidy
-      run: go mod tidy
+      - name: Check formatting
+        run: |
+          if [ -n "$(gofmt -s -l .)" ]; then
+            echo "Files not formatted:"
+            gofmt -s -l .
+            exit 1
+          fi
 
-    - name: Build
-      run: go build -o bin/tamk ./cmd/tamk
+      - name: Vet
+        run: go vet ./...
 
-    - name: Vet
-      run: go vet ./...
+  test:
+    name: Test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-    - name: Test
-      run: go test -count=1 -short ./...
-      env:
-        TAMK_HOME: ${{ github.workspace }}
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: Tidy
+        run: go mod tidy
+
+      - name: Test
+        run: go test -race -cover -short ./...
+        env:
+          TAMK_HOME: ${{ github.workspace }}
+
+      - name: Test (verbose)
+        if: failure()
+        run: go test -v -count=1 ./...
+
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: Build
+        run: go build -o bin/tamk ./cmd/tamk
+
+      - name: Verify binary
+        run: ./bin/tamk version
+
+      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: tamk-linux-amd64
+          path: bin/tamk
+          retention-days: 7

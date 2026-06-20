@@ -1,0 +1,118 @@
+name: Test Windows Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'internal/tools/**'
+      - 'internal/usecase/project_build.go'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cross-compile:
+    name: Cross-compile for Windows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: Build Windows binary
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: '0'
+        run: |
+          go build -trimpath \
+            -ldflags="-s -w" \
+            -o tamk-windows-amd64.exe \
+            ./cmd/tamk
+
+      - name: Verify binary size
+        run: |
+          SIZE=$(stat -c%s tamk-windows-amd64.exe 2>/dev/null || stat -f%z tamk-windows-amd64.exe)
+          echo "Binary size: $SIZE bytes ($(( SIZE / 1024 / 1024 )) MB)"
+          if [ "$SIZE" -lt 100000000 ]; then
+            echo "ERROR: Binary too small (< 100MB), embedded tools may be missing"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: tamk-windows-amd64
+          path: tamk-windows-amd64.exe
+          retention-days: 7
+
+  test-windows:
+    name: Test on Windows
+    needs: cross-compile
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.1.8
+        with:
+          name: tamk-windows-amd64
+
+      - name: Test binary runs
+        run: |
+          .\tamk-windows-amd64.exe version
+        shell: cmd
+
+      - name: Test embedded tools extraction
+        run: |
+          $env:TAMK_HOME = "${{ github.workspace }}"
+          .\tamk-windows-amd64.exe version
+        shell: pwsh
+
+      - name: Verify temp directory created
+        run: |
+          $tempDir = "$env:TEMP\tamk-tools"
+          if (Test-Path $tempDir) {
+            Write-Host "Tools extracted to: $tempDir"
+            Get-ChildItem $tempDir -Recurse | Select-Object FullName, Length
+          } else {
+            Write-Host "Temp directory not yet created (lazy extraction)"
+          }
+        shell: pwsh
+
+  test-windows-build:
+    name: Full Build Test on Windows
+    needs: test-windows
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.1.8
+        with:
+          name: tamk-windows-amd64
+
+      - name: Setup test project
+        run: |
+          .\tamk-windows-amd64.exe create --name TestApp --type webapp --author "CI Test" --version "1.0.0"
+        shell: cmd
+
+      - name: Verify project structure
+        run: |
+          if (Test-Path "TestApp\AndroidManifest.xml") {
+            Write-Host "Project created successfully"
+          } else {
+            Write-Host "ERROR: Project creation failed"
+            exit 1
+          }
+        shell: pwsh
