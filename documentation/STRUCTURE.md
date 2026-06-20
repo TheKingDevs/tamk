@@ -19,6 +19,9 @@ tamk/                                    # Project root
 ├── Makefile                            # Build, test, lint targets
 ├── Dockerfile                          # Containerized build environment
 ├── .golangci.yml                       # Linter configuration
+├── .githooks/                          # Git hooks (pre-commit via core.hooksPath)
+└── .agents/
+    └── hooks/                          # Agent lifecycle hooks (work-finished)
 │
 ├── cmd/                                # Entry points
 │   └── tamk/

@@ -199,6 +199,9 @@ tamk/
 ├── tests/                           # Test fixture data (DupTest, TestConsole, TestWebApp)
 ├── go.mod                           # Go module definition
 ├── go.sum                           # Go module checksum
+├── .githooks/                       # Git hooks (pre-commit: fmt, vet, tests, bench)
+├── .agents/
+│   └── hooks/                       # Agent lifecycle hooks (work-finished)
 ├── Makefile                         # Build, test, lint targets
 ├── Dockerfile                       # Containerized build environment
 └── .golangci.yml                    # Linter configuration
@@ -611,6 +614,27 @@ ASCII art logo loaded and rendered during `tamk create` and `tamk version`.
 | `CHANGELOG.md` | Version history and changes |
 | `CONTRIBUTING.md` | Contribution guidelines |
 | `VERSIONING.txt` | Version scheme reference |
+
+---
+
+## HOOKS SYSTEM
+
+Two independent hooks systems coexist in the project:
+
+| Directory | Trigger | Purpose | Standard |
+| :--- | :--- | :--- | :--- |
+| `.githooks/` | `git commit` | Code quality gates (fmt, vet, tests, bench) | Git convention via `core.hooksPath` |
+| `.agents/hooks/` | Agent task completion | User notification (vibrate/notify) | opencode agent lifecycle |
+
+**Do not conflate them.** They serve different layers:
+- `.githooks/pre-commit` runs on every `git commit` — enforces Go formatting, vet, tests, and benchmarks.
+- `.agents/hooks/work-finished` runs when an AI agent finishes a task — notifies the user.
+
+### Setup
+
+```bash
+make setup  # Includes: git config core.hooksPath .githooks
+```
 
 ---
 

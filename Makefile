@@ -59,6 +59,8 @@ dev:
 setup:
 	go mod tidy
 	go mod download
+	git config core.hooksPath .githooks
+	chmod +x .githooks/*
 
 docker-build:
 	docker build -t $(APP_NAME) .
