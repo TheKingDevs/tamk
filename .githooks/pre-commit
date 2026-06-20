@@ -1,0 +1,51 @@
+#!/bin/sh
+# Pre-commit hook: fmt, vet, staticcheck, benchmarks, tests
+# Fail fast — exit on first failure.
+
+set -e
+
+PASS=0
+FAIL=1
+
+blue() { printf "\033[1;34m%s\033[0m\n" "$1"; }
+green() { printf "\033[1;32m%s\033[0m\n" "$1"; }
+red()   { printf "\033[1;31m%s\033[0m\n" "$1"; }
+
+run_stage() {
+    name=$1; shift
+    blue "→ ${name}..."
+    "$@" || { red "✗ ${name} failed"; exit $FAIL; }
+    green "✓ ${name} passed"
+}
+
+echo "=== Pre-commit checks ==="
+
+run_stage "gofmt (simplify)" gofmt -s -w .
+
+run_stage "go vet" go vet ./internal/... ./pkg/... ./cmd/...
+
+run_stage "go test (short)" go test -count=1 -short ./internal/... ./pkg/...
+
+# Performance regression guard: fail if benchmarks regress >10%
+BENCH_FILE="/tmp/tamk-bench-$(git rev-parse HEAD).txt"
+BENCH_OLD="/tmp/tamk-bench-baseline.txt"
+
+run_stage "benchmarks (baseline)" go test -bench=. -benchmem -run=^$ -count=1 \
+    ./pkg/watcher/ ./internal/repository/filesystem/ 2>/dev/null \
+    | tee "$BENCH_FILE" >/dev/null
+
+if [ -f "$BENCH_OLD" ]; then
+    benchstat "$BENCH_OLD" "$BENCH_FILE" 2>/dev/null | grep -E '\+[0-9]+\.[0-9]+%' >/tmp/bench-regress.txt || true
+    if [ -s /tmp/bench-regress.txt ]; then
+        red "⚠ Performance regression detected (>10% slowdown):"
+        cat /tmp/bench-regress.txt
+        exit $FAIL
+    fi
+    green "✓ No significant performance regression"
+else
+    cp "$BENCH_FILE" "$BENCH_OLD"
+    green "✓ Benchmarks recorded as new baseline"
+fi
+
+echo ""
+green "=== All pre-commit checks passed ==="

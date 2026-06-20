@@ -1,0 +1,26 @@
+package entity
+
+type BuildPhase string
+
+const (
+	BuildPhaseAAPT2Compile  BuildPhase = "aapt2_compile"
+	BuildPhaseAAPT2Link     BuildPhase = "aapt2_link"
+	BuildPhaseKotlinCompile BuildPhase = "kotlin_compile"
+	BuildPhaseD8            BuildPhase = "d8"
+	BuildPhasePackageDEX    BuildPhase = "package_dex"
+	BuildPhaseZipalign      BuildPhase = "zipalign"
+	BuildPhaseApkSign       BuildPhase = "apk_sign"
+)
+
+type BuildResult struct {
+	Success  bool
+	APKPath  string
+	Phase    BuildPhase
+	ErrorMsg string
+}
+
+type BuildCache struct {
+	Hash     string
+	PrevHash string
+	Changed  bool
+}

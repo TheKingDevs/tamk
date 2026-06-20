@@ -1,0 +1,38 @@
+app:
+  name: tamk
+  version: "2026.3.0-HMR"
+  environment: "termux"
+
+sdk:
+  path: "development/sdk/android.jar"
+  url: "https://dl.google.com/android/repository/platform-30_r03.zip"
+  expected_hash: ""
+
+keystore:
+  debug_path: "development/secret/debug.keystore"
+  debug_password: "android"
+  key_size: 2048
+  validity_days: 10000
+
+build:
+  min_sdk: 21
+  target_sdk: 30
+  cache_enabled: true
+
+dev:
+  ws_port: 8765
+  http_port: 8080
+  watch_extensions:
+    - ".html"
+    - ".css"
+    - ".js"
+    - ".json"
+    - ".png"
+    - ".jpg"
+    - ".svg"
+  debounce_ms: 500
+
+update:
+  github_repo: "Shadw-Developer/tamk"
+  cache_ttl_hours: 6
+  auto_install_critical: true
