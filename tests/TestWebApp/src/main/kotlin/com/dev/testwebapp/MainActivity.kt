@@ -1,0 +1,279 @@
+package com.dev.testwebapp
+
+import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Bundle
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.webkit.WebSettings
+import android.util.Log
+import android.widget.Toast
+import java.io.File
+
+class MainActivity : Activity() {
+
+    private lateinit var webView: WebView
+    private val TAG = "MainActivity"
+
+    // BroadcastReceiver para recarregamento de assets em desenvolvimento
+    private val refreshReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                "tamk.ACTION_REFRESH_ASSET" -> {
+                    val path = intent.getStringExtra("path")
+                    Log.d(TAG, "Refresh solicitado para asset: $path")
+                    refreshAsset(path)
+                }
+                "tamk.ACTION_REFRESH_ALL" -> {
+                    Log.d(TAG, "Refresh total solicitado")
+                    webView.reload()
+                }
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        try {
+            webView = WebView(this)
+
+            // Configurações de segurança e performance
+            webView.settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                allowFileAccess = true
+                allowContentAccess = false
+                allowFileAccessFromFileURLs = true
+                allowUniversalAccessFromFileURLs = true
+
+                cacheMode = WebSettings.LOAD_DEFAULT
+                setRenderPriority(WebSettings.RenderPriority.HIGH)
+
+                setSupportZoom(true)
+                builtInZoomControls = true
+                displayZoomControls = false
+            }
+
+            webView.webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                    return false
+                }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    Log.d(TAG, "Página carregada: $url")
+
+                    // Injeta bridge HMR após página carregada
+                    injectHMRBridge()
+                }
+
+                override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, failingUrl: String?) {
+                    Log.e(TAG, "Erro ao carregar: $description em $failingUrl")
+                }
+            }
+
+            webView.webChromeClient = object : WebChromeClient() {
+                override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
+                    if (consoleMessage != null) {
+                        Log.d(TAG, "JS: ${consoleMessage.message()}")
+                    }
+                    return true
+                }
+            }
+
+            setContentView(webView)
+
+            // Carrega URL configurada
+            val webUrl = "file:///android_asset/index.html"
+            Log.d(TAG, "Carregando URL: $webUrl")
+
+            if (webUrl.isEmpty()) {
+                Toast.makeText(this, "URL não configurada", Toast.LENGTH_LONG).show()
+                webView.loadData("<html><body><h1>Erro: URL não configurada</h1></body></html>", "text/html", "UTF-8")
+            } else {
+                webView.loadUrl(webUrl)
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro ao criar WebView: ${e.message}")
+            Toast.makeText(this, "Erro: ${e.message}", Toast.LENGTH_LONG).show()
+            finish()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Registra receiver para comandos de refresh
+        val filter = IntentFilter().apply {
+            addAction("tamk.ACTION_REFRESH_ASSET")
+            addAction("tamk.ACTION_REFRESH_ALL")
+        }
+        registerReceiver(refreshReceiver, filter)
+        Log.d(TAG, "Refresh receiver registrado")
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Remove receiver
+        unregisterReceiver(refreshReceiver)
+        Log.d(TAG, "Refresh receiver removido")
+    }
+
+    /**
+     * Injeta bridge JavaScript para HMR
+     */
+    private fun injectHMRBridge() {
+        val bridgeJS = """
+            (function() {
+                if (typeof window.TAMK_DEV === 'undefined') {
+                    window.TAMK_DEV = {
+                        ws: null,
+                        connected: false,
+                        hmr: {
+                            enabled: true,
+                            debug: false
+                        }
+                    };
+                }
+
+                if (typeof window.TAMK_HMR === 'undefined') {
+                    window.TAMK_HMR = {
+                        _handlers: {},
+
+                        accept: function(modulePath, handler) {
+                            if (typeof modulePath === 'function') {
+                                window.TAMK_HMR._handlers['*'] = modulePath;
+                            } else {
+                                window.TAMK_HMR._handlers[modulePath] = handler;
+                            }
+                        },
+
+                        saveState: function(key, value) {
+                            try {
+                                sessionStorage.setItem('TAMK_HMR_' + key, JSON.stringify(value));
+                            } catch (e) {
+                                console.warn('[HMR] Falha ao salvar estado:', e);
+                            }
+                        },
+
+                        getState: function(key) {
+                            try {
+                                const val = sessionStorage.getItem('TAMK_HMR_' + key);
+                                return val ? JSON.parse(val) : undefined;
+                            } catch (e) {
+                                return undefined;
+                            }
+                        },
+
+                        dispose: function(modulePath) {
+                            if (window.TAMK_HMR._handlers) {
+                                if (modulePath === '*') {
+                                    window.TAMK_HMR._handlers = {};
+                                } else {
+                                    delete window.TAMK_HMR._handlers[modulePath];
+                                }
+                            }
+                        },
+
+                        // NOVO: Suporte a HTML hot-reload
+                        updateHTML: function(htmlContent, selector) {
+                            selector = selector || 'body';
+
+                            // Salva estado crítico antes da mudança
+                            const state = {
+                                scrollY: window.scrollY,
+                                scrollX: window.scrollX,
+                                formData: {}
+                            };
+
+                            // Captura dados de formulários
+                            document.querySelectorAll('input, textarea, select').forEach(function(el) {
+                                if (el.id || el.name) {
+                                    state.formData[el.id || el.name] = el.value;
+                                }
+                            });
+
+                            // Aplica novo HTML
+                            const element = document.querySelector(selector);
+                            if (element) {
+                                element.innerHTML = htmlContent;
+                            } else {
+                                console.warn('[HMR] Elemento não encontrado:', selector);
+                                return false;
+                            }
+
+                            // Restaura scroll
+                            window.scrollTo(state.scrollX, state.scrollY);
+
+                            // Restaura formulários
+                            for (const [id, value] of Object.entries(state.formData)) {
+                                const el = document.getElementById(id) || document.querySelector('[name="' + id + '"]');
+                                if (el) el.value = value;
+                            }
+
+                            console.log('[HMR] HTML atualizado em "' + selector + '"');
+                            return true;
+                        }
+                    };
+
+                    console.log('[TAMK] HMR bridge injected (com suporte HTML)');
+                }
+            })();
+        """.trimIndent()
+
+        webView.evaluateJavascript(bridgeJS, null)
+    }
+
+    /**
+     * Recarrega asset específico (para uso com broadcast ADB)
+     */
+    private fun refreshAsset(path: String?) {
+        if (path == null || path.isEmpty()) {
+            webView.reload()
+            return
+        }
+
+        // Se for HTML, Injeta via JavaScript
+        if (path.endsWith(".html") || path.endsWith(".htm")) {
+            val assetPath = "/android_asset/" + path
+            webView.evaluateJavascript(
+                "(function() { " +
+                "  fetch('$assetPath')" +
+                "    .then(r => r.text())" +
+                "    .then(html => { " +
+                "      if (window.TAMK_HMR && window.TAMK_HMR.updateHTML) { " +
+                "        window.TAMK_HMR.updateHTML(html, 'body');" +
+                "      } else { " +
+                "        document.body.innerHTML = html;" +
+                "      }" +
+                "    })" +
+                "    .catch(err => console.error('Erro ao recarregar HTML:', err));" +
+                "})()",
+                null
+            )
+        } else {
+            // Para outros assets, força reload completo
+            webView.reload()
+        }
+    }
+
+    override fun onBackPressed() {
+        if (::webView.isInitialized && webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    override fun onDestroy() {
+        if (::webView.isInitialized) {
+            webView.stopLoading()
+            webView.destroy()
+        }
+        super.onDestroy()
+    }
+}
