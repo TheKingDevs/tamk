@@ -256,7 +256,7 @@ func (s *shellState) doBuild(args []string) error {
 	if !result.Success {
 		return fmt.Errorf("build failed: %s: %w", result.ErrorMsg, errors.ErrBuildFailed)
 	}
-	logger.Success("APK ready", "path", result.APKPath)
+	logger.Success("APK ready in", "apk", result.APKPath)
 	return nil
 }
 

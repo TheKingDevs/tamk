@@ -1,0 +1,77 @@
+package {{PACKAGE}}.security
+
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import java.util.concurrent.atomic.AtomicBoolean
+
+/**
+ * RASPSecurityModule — Runtime Application Self-Protection
+ * Monitors the app at runtime and responds to threats.
+ *
+ * Usage:
+ *   RASPSecurityModule.start(context)
+ *   // In Activity:
+ *   override fun onResume() { super.onResume(); RASPSecurityModule.onResume() }
+ *   override fun onPause() { super.onPause(); RASPSecurityModule.onPause() }
+ */
+object RASPSecurityModule {
+
+    private val isRunning = AtomicBoolean(false)
+    private val handler = Handler(Looper.getMainLooper())
+    private var checkIntervalMs = 5000L
+    private var threatHandler: ((GuardianBridge.SecurityThreat) -> Unit)? = null
+    private var appContext: Context? = null
+
+    private val securityCheckRunnable = object : Runnable {
+        override fun run() {
+            if (!isRunning.get()) return
+            performChecks()
+            handler.postDelayed(this, checkIntervalMs)
+        }
+    }
+
+    /**
+     * Start RASP protection.
+     * @param context Application or Activity context
+     * @param intervalMs How often to run security checks (default: 5000ms)
+     * @param onThreat Callback when a threat is detected
+     */
+    fun start(
+        context: Context,
+        intervalMs: Long = 5000L,
+        onThreat: ((GuardianBridge.SecurityThreat) -> Unit)? = null
+    ) {
+        if (isRunning.compareAndSet(false, true)) {
+            checkIntervalMs = intervalMs
+            threatHandler = onThreat
+            appContext = context.applicationContext
+            GuardianBridge.initialize(context)
+            handler.postDelayed(securityCheckRunnable, 1000)
+        }
+    }
+
+    fun stop() {
+        isRunning.set(false)
+        handler.removeCallbacks(securityCheckRunnable)
+        appContext = null
+    }
+
+    fun onResume() {
+        if (isRunning.get()) {
+            handler.post(securityCheckRunnable)
+        }
+    }
+
+    fun onPause() {
+        handler.removeCallbacks(securityCheckRunnable)
+    }
+
+    private fun performChecks() {
+        val context = appContext ?: return
+        val threat = GuardianBridge.performSecurityCheck(context)
+        if (threat != null) {
+            handler.post { threatHandler?.invoke(threat) }
+        }
+    }
+}

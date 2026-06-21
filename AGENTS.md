@@ -622,6 +622,7 @@ ASCII art logo loaded and rendered during `tamk create` and `tamk version`.
 | `CHANGELOG.md` | Version history and changes |
 | `CONTRIBUTING.md` | Contribution guidelines |
 | `VERSIONING.txt` | Version scheme reference |
+| `GUARDIAN_SECURITY.md` | Guardian security system documentation |
 
 ---
 
@@ -676,6 +677,79 @@ make setup  # Includes: git config core.hooksPath .githooks
 | `Build failed: D8 error` | Kotlin syntax error | Check generated Kotlin files |
 | `no project found in current directory` | No tamk.config | Run from project directory |
 | `APK base not found` | No prior build for dev mode | `tamk build` first |
+
+---
+
+## GUARDIAN SECURITY SYSTEM
+
+### Overview
+
+The Guardian Security System provides multi-layered APK protection without requiring NDK/native code. It uses pure Kotlin security checks combined with Go-side asset encryption.
+
+### Quick Start
+
+```bash
+# Build with security protection
+tamk build -p <password> --guardian
+
+# Verify security features
+jadx -d decompiled app.apk
+find decompiled -name "*.java" | grep -E "(Guardian|RASP)"
+```
+
+### Security Features
+
+| Feature | Description |
+| :--- | :--- |
+| Anti-Debug | 5 detection methods (API, TracerPid, Timing, Props, JDWP) |
+| Anti-Root | 4 layers (Files, /data/data, Apps, Magisk) |
+| Anti-Frida | 5 methods (Process, Maps, Ports, TCP, Files) |
+| Anti-Emulator | Build props, files, QEMU, CPU info |
+| Asset Encryption | AES-256-GCM with magic header `TAMK_ENC_1` |
+| RASP | Periodic runtime checks with threat callbacks |
+
+### Security Levels
+
+| Level | Features | Use Case |
+| :--- | :--- | :--- |
+| `none` | No security | Development |
+| `basic` | Anti-debug only | Testing |
+| `standard` | + Anti-root, Anti-Frida, Integrity | Internal apps |
+| `maximum` | + Anti-emulator, RASP | Production |
+
+### Key Files
+
+| File | Purpose |
+| :--- | :--- |
+| `templates/security/kotlin/GuardianBridge.kt.tmpl` | Main security class |
+| `templates/security/kotlin/RASPSecurityModule.kt.tmpl` | Runtime protection |
+| `internal/domain/entity/security.go` | SecurityConfig entity |
+| `internal/usecase/asset_encryptor.go` | AES-256-GCM encryption |
+| `documentation/GUARDIAN_SECURITY.md` | Full documentation |
+
+### Usage in Code
+
+```kotlin
+// Initialize Guardian
+GuardianBridge.initialize(context)
+
+// Check for threats
+if (GuardianBridge.isDebuggerAttached()) {
+    // Handle threat
+}
+
+// Start RASP protection
+RASPSecurityModule.start(context, 5000L) { threat ->
+    when (threat) {
+        GuardianBridge.SecurityThreat.DEBUGGER -> finish()
+        GuardianBridge.SecurityThreat.FRIDA -> finish()
+        GuardianBridge.SecurityThreat.ROOT -> {
+            // Disable sensitive features
+        }
+        else -> { /* handle other threats */ }
+    }
+}
+```
 
 ---
 

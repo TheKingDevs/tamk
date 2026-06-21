@@ -60,17 +60,8 @@ func New() *Config {
 
 func ConfigFromEnv() *Config {
 	cfg := New()
-	if envType := os.Getenv("TAMK_ENV"); envType != "" {
-		cfg.EnvType = envType
-	}
-	if home := os.Getenv("TAMK_HOME"); home != "" {
-		cfg.TAMKHome = home
-	}
 	if sdk := os.Getenv("TAMK_SDK_PATH"); sdk != "" {
 		cfg.SDKPath = sdk
-	}
-	if ks := os.Getenv("TAMK_KEYSTORE"); ks != "" {
-		cfg.Keystore = ks
 	}
 	if devDir := os.Getenv("TAMK_DEV_DIR"); devDir != "" {
 		cfg.DevDir = devDir

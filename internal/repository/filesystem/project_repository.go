@@ -17,15 +17,16 @@ func NewProjectRepository() *ProjectRepository {
 }
 
 type projectConfig struct {
-	Type        entity.ProjectType `json:"type"`
-	Name        string             `json:"name"`
-	Version     string             `json:"version"`
-	Author      string             `json:"author"`
-	PackageName string             `json:"package"`
-	WebURL      string             `json:"web_url,omitempty"`
-	WebMode     string             `json:"web_mode,omitempty"`
-	MinSDK      int                `json:"min_sdk,omitempty"`
-	TargetSDK   int                `json:"target_sdk,omitempty"`
+	Type        entity.ProjectType    `json:"type"`
+	Name        string                `json:"name"`
+	Version     string                `json:"version"`
+	Author      string                `json:"author"`
+	PackageName string                `json:"package"`
+	WebURL      string                `json:"web_url,omitempty"`
+	WebMode     string                `json:"web_mode,omitempty"`
+	MinSDK      int                   `json:"min_sdk,omitempty"`
+	TargetSDK   int                   `json:"target_sdk,omitempty"`
+	Security    *entity.SecurityConfig `json:"security,omitempty"`
 }
 
 func (r *ProjectRepository) Save(ctx context.Context, project *entity.Project, path string) error {
@@ -39,6 +40,11 @@ func (r *ProjectRepository) Save(ctx context.Context, project *entity.Project, p
 		WebMode:     string(project.WebMode),
 		MinSDK:      project.MinSDK,
 		TargetSDK:   project.TargetSDK,
+	}
+
+	// Only include security config if enabled
+	if project.Security.Enabled {
+		cfg.Security = &project.Security
 	}
 
 	tamkConfigPath := filepath.Join(path, "tamk.config")
@@ -63,7 +69,7 @@ func (r *ProjectRepository) Load(ctx context.Context, path string) (*entity.Proj
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
 
-	return &entity.Project{
+	project := &entity.Project{
 		Name:        cfg.Name,
 		Type:        cfg.Type,
 		Version:     cfg.Version,
@@ -73,7 +79,14 @@ func (r *ProjectRepository) Load(ctx context.Context, path string) (*entity.Proj
 		WebMode:     entity.WebContentMode(cfg.WebMode),
 		MinSDK:      cfg.MinSDK,
 		TargetSDK:   cfg.TargetSDK,
-	}, nil
+	}
+
+	// Load security config if present
+	if cfg.Security != nil {
+		project.Security = *cfg.Security
+	}
+
+	return project, nil
 }
 
 func (r *ProjectRepository) Exists(ctx context.Context, path string) bool {

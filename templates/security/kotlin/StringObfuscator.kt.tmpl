@@ -1,0 +1,59 @@
+package {{PACKAGE}}.security
+
+/**
+ * StringObfuscator — Runtime string deobfuscation
+ * Protects sensitive strings from static analysis.
+ * 
+ * Usage: Instead of hardcoding strings, use obfuscated versions:
+ *   val apiKey = StringObfuscator.decode(arrayOf(0x41, 0x42, 0x43), 0x12)
+ */
+object StringObfuscator {
+
+    /**
+     * Decode an obfuscated string at runtime.
+     * @param encoded Array of encoded byte values
+     * @param xorKey XOR key for decoding
+     * @return Decoded string
+     */
+    fun decode(encoded: IntArray, xorKey: Int): String {
+        return String(encoded.map { (it xor xorKey).toByte() }.toByteArray())
+    }
+
+    /**
+     * Encode a string for obfuscation (use during build).
+     * @param plainText Original string
+     * @param xorKey XOR key for encoding
+     * @return Array of encoded integer values
+     */
+    fun encode(plainText: String, xorKey: Int): IntArray {
+        return plainText.toByteArray().map { it.toInt() xor xorKey }.toIntArray()
+    }
+
+    /**
+     * Multi-layer obfuscation with rotation.
+     */
+    fun decodeMultiLayer(data: IntArray, keys: IntArray): String {
+        var result = data.toList()
+        
+        for (key in keys) {
+            result = result.map { it xor key }
+        }
+        
+        return String(result.map { it.toByte() }.toByteArray())
+    }
+
+    /**
+     * Split string reconstruction.
+     * Reconstructs a string from multiple obfuscated parts.
+     */
+    fun reconstructFromParts(parts: List<Pair<IntArray, Int>>, separator: String = ""): String {
+        return parts.joinToString(separator) { (encoded, key) ->
+            decode(encoded, key)
+        }
+    }
+
+    // Example: Obfuscated API key parts
+    // val part1 = decode(intArrayOf(0x41, 0x50, 0x49), 0x00) // "API"
+    // val part2 = decode(intArrayOf(0x5F, 0x4B, 0x45, 0x59), 0x00) // "_KEY"
+    // val apiKey = part1 + part2
+}

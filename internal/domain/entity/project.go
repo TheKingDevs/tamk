@@ -29,6 +29,8 @@ type Project struct {
 	MinSDK    int
 	TargetSDK int
 
+	Security SecurityConfig `json:"security,omitempty"`
+
 	CreatedAt string
 	UpdatedAt string
 }

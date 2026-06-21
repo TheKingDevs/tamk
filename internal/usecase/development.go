@@ -161,13 +161,8 @@ func (uc *DevModeUseCase) installAPK() {
 }
 
 func (uc *DevModeUseCase) findAPK(projectPath string) string {
-	for _, pattern := range []string{"*-release.apk", "*-dev.apk"} {
-		matches, _ := filepath.Glob(filepath.Join(projectPath, pattern))
-		if len(matches) > 0 {
-			return matches[0]
-		}
-	}
-	return ""
+	path, _ := FindAPKInDir(projectPath)
+	return path
 }
 
 func (uc *DevModeUseCase) injectDevBridge() error {

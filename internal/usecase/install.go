@@ -6,9 +6,7 @@ import (
 	"html/template"
 	"net"
 	"net/http"
-	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/TheKingDevs/tamk/pkg/logger"
 	"github.com/TheKingDevs/tamk/pkg/qrcode"
@@ -27,20 +25,8 @@ func NewInstallUseCase() *InstallUseCase {
 	return &InstallUseCase{}
 }
 
-func findAPK(projectPath string) (string, error) {
-	patterns := []string{"*-release.apk", "*-dev.apk"}
-	for _, p := range patterns {
-		pattern := filepath.Join(projectPath, p)
-		matches, err := filepath.Glob(pattern)
-		if err == nil && len(matches) > 0 {
-			return matches[0], nil
-		}
-	}
-	return "", fmt.Errorf("APK not found in %s", projectPath)
-}
-
 func (uc *InstallUseCase) Serve(ctx context.Context, projectPath string, port int) (*InstallOutput, error) {
-	apkPath, err := findAPK(projectPath)
+	apkPath, err := FindAPKInDir(projectPath)
 	if err != nil {
 		return nil, err
 	}
@@ -203,19 +189,9 @@ func getLocalIP() string {
 }
 
 func (uc *InstallUseCase) FindAPK(projectPath string) (string, error) {
-	return findAPK(projectPath)
+	return FindAPKInDir(projectPath)
 }
 
 func (uc *InstallUseCase) FindAPKs(projectPath string) []string {
-	var apks []string
-	entries, err := os.ReadDir(projectPath)
-	if err != nil {
-		return nil
-	}
-	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".apk") {
-			apks = append(apks, filepath.Join(projectPath, e.Name()))
-		}
-	}
-	return apks
+	return FindAllAPKs(projectPath)
 }

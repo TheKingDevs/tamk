@@ -4,6 +4,42 @@ All notable changes. Format based on [Keep a Changelog](https://keepachangelog.c
 
 ---
 
+## [1.1.0] - 2026-06-21
+
+### ✨ Added
+
+- **Guardian Security System**: Multi-layered APK protection
+  - Anti-Debug: 5 detection methods (API, TracerPid, Timing, Props, JDWP)
+  - Anti-Root: 4 layers (Files, /data/data, Apps, Magisk)
+  - Anti-Frida: 5 methods (Process, Maps, Ports, TCP, Files)
+  - Anti-Emulator: Build props, files, QEMU, CPU info
+  - Asset Encryption: AES-256-GCM with magic header `TAMK_ENC_1`
+  - RASP: Periodic runtime checks with threat callbacks
+  - Security levels: none, basic, standard, maximum
+  - `--guardian` CLI flag for build command
+  - SecurityConfig entity with JSON persistence
+- **Asset Encryptor**: AES-256-GCM encryption for project assets
+  - Key derivation from password via SHA-256
+  - Random salt and IV generation
+  - Magic header `TAMK_ENC_1` for identification
+- **Security Templates**: Kotlin security classes
+  - `GuardianBridge.kt.tmpl`: Main security module
+  - `RASPSecurityModule.kt.tmpl`: Runtime protection
+
+### 🔧 Changed
+
+- Build pipeline: Added security template injection step
+- Project entity: Added `Security` field with `SecurityConfig`
+- Project repository: Security config persistence in `tamk.config`
+- CLI: Added `--guardian` global flag
+
+### 📚 Documentation
+
+- Added `GUARDIAN_SECURITY.md`: Complete security documentation
+- Updated `AGENTS.md`: Added Guardian Security section
+
+---
+
 ## [1.0.0] - 2026-06-18
 
 ### ✨ Added

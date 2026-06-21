@@ -139,29 +139,7 @@ func (uc *CreateProjectUseCase) createWebAppStructure(ctx context.Context, proje
 		return err
 	}
 
-	for _, m := range mappings {
-		tmplContent, err := uc.tmplRepo.LoadTemplateForType(ctx, string(project.Type), m.Template)
-		if err != nil {
-			if m.Internal {
-				logger.Warn("Template not found (skipping)", "template", m.Template)
-				continue
-			}
-			return fmt.Errorf("required template %s not found: %w", m.Template, err)
-		}
-
-		content := uc.tmplRepo.ApplyPlaceholders(tmplContent, placeholders)
-
-		dest := m.Dest
-		if strings.HasPrefix(dest, "src/main/kotlin/") {
-			dest = "src/main/kotlin/" + strings.ReplaceAll(project.PackageName, ".", "/") + "/MainActivity.kt"
-		}
-
-		if err := uc.tmplRepo.WriteTemplate(ctx, projectPath, dest, content); err != nil {
-			return fmt.Errorf("failed to write %s: %w", dest, err)
-		}
-	}
-
-	return nil
+	return uc.processMappings(ctx, project, projectPath, mappings, placeholders)
 }
 
 func (uc *CreateProjectUseCase) createUIAPKStructure(ctx context.Context, project *entity.Project, projectPath string, input CreateProjectInput) error {
@@ -186,11 +164,27 @@ func (uc *CreateProjectUseCase) createUIAPKStructure(ctx context.Context, projec
 		return err
 	}
 
+	return uc.processMappings(ctx, project, projectPath, mappings, placeholders)
+}
+
+// processMappings applies template mappings to create project files.
+func (uc *CreateProjectUseCase) processMappings(
+	ctx context.Context,
+	project *entity.Project,
+	projectPath string,
+	mappings []entity.TemplateMapping,
+	placeholders map[string]string,
+) error {
 	for _, m := range mappings {
 		tmplContent, err := uc.tmplRepo.LoadTemplateForType(ctx, string(project.Type), m.Template)
 		if err != nil {
-			return fmt.Errorf("template %s not found: %w", m.Template, err)
+			if m.Internal {
+				logger.Warn("Template not found (skipping)", "template", m.Template)
+				continue
+			}
+			return fmt.Errorf("required template %s not found: %w", m.Template, err)
 		}
+
 		content := uc.tmplRepo.ApplyPlaceholders(tmplContent, placeholders)
 
 		dest := m.Dest
@@ -199,7 +193,7 @@ func (uc *CreateProjectUseCase) createUIAPKStructure(ctx context.Context, projec
 		}
 
 		if err := uc.tmplRepo.WriteTemplate(ctx, projectPath, dest, content); err != nil {
-			return err
+			return fmt.Errorf("failed to write %s: %w", dest, err)
 		}
 	}
 

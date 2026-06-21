@@ -21,6 +21,7 @@ import (
 var (
 	verbose  bool
 	password string
+	guardian bool
 )
 
 func NewRootCmd() *cobra.Command {
@@ -54,6 +55,7 @@ func NewRootCmd() *cobra.Command {
 
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "V", false, "Debug-level logging")
 	cmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Keystore password")
+	cmd.PersistentFlags().BoolVar(&guardian, "guardian", false, "Enable Guardian security protection")
 
 	cmd.AddCommand(newCreateCmd(createUC))
 	cmd.AddCommand(newBuildCmd(buildUC, projRepo))
@@ -79,7 +81,7 @@ func newCreateCmd(uc *usecase.CreateProjectUseCase) *cobra.Command {
 }
 
 func newBuildCmd(uc *usecase.BuildProjectUseCase, projRepo *repoFS.ProjectRepository) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "build",
 		Short: "Build APK from current project",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -98,6 +100,7 @@ func newBuildCmd(uc *usecase.BuildProjectUseCase, projRepo *repoFS.ProjectReposi
 			result, err := uc.FullBuild(ctx, usecase.BuildInput{
 				ProjectPath: cwd,
 				Password:    pwd,
+				Guardian:    guardian,
 			})
 			if err != nil {
 				return err
@@ -105,10 +108,12 @@ func newBuildCmd(uc *usecase.BuildProjectUseCase, projRepo *repoFS.ProjectReposi
 			if !result.Success {
 				return fmt.Errorf("build failed: %s: %w", result.ErrorMsg, errors.ErrBuildFailed)
 			}
-			logger.Success("APK ready", "path", result.APKPath)
+			logger.Success("APK ready in", "apk", result.APKPath)
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&guardian, "guardian", false, "Enable Guardian security protection")
+	return cmd
 }
 
 func newDevCmd(uc *usecase.DevModeUseCase, projRepo *repoFS.ProjectRepository, cfg *config.Config) *cobra.Command {

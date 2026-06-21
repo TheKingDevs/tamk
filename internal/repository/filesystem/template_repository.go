@@ -152,5 +152,6 @@ func (r *TemplateRepository) getTemplateDirCandidates() []string {
 		r.cfg.GetTemplateDir("webapp"),
 		r.cfg.GetTemplateDir("ui_apk"),
 		r.cfg.GetTemplateDir("console"),
+		r.cfg.GetTemplateDir("security"),
 	}
 }

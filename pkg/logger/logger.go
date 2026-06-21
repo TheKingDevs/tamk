@@ -82,13 +82,16 @@ func Error(msg string, args ...any) {
 }
 
 const (
-	ansiReset  = "\033[0m"
-	ansiCyan   = "\033[36m"
-	ansiGreen  = "\033[32m"
-	ansiYellow = "\033[33m"
-	ansiRed    = "\033[31m"
-	ansiGray   = "\033[90m"
-	ansiBlue   = "\033[34m"
+	AnsiReset  = "\033[0m"
+	AnsiBold   = "\033[1m"
+	AnsiDim    = "\033[2m"
+	AnsiCyan   = "\033[36m"
+	AnsiGreen  = "\033[32m"
+	AnsiYellow = "\033[33m"
+	AnsiRed    = "\033[31m"
+	AnsiGray   = "\033[90m"
+	AnsiBlue   = "\033[34m"
+	AnsiPurple = "\033[35m"
 )
 
 type consoleHandler struct {
@@ -109,28 +112,28 @@ func (h *consoleHandler) Handle(_ context.Context, r slog.Record) error {
 	switch {
 	case level == slog.Level(4):
 		label = " OK "
-		color = ansiGreen
+		color = AnsiGreen
 	case level == slog.Level(2):
 		label = "STEP"
-		color = ansiCyan
+		color = AnsiCyan
 	case level >= slog.LevelError:
 		label = "ERROR"
-		color = ansiRed
+		color = AnsiRed
 	case level >= slog.LevelWarn:
 		label = "WARN"
-		color = ansiYellow
+		color = AnsiYellow
 	case level >= slog.LevelInfo:
 		label = "INFO"
-		color = ansiBlue
+		color = AnsiBlue
 	default:
 		label = "DEBUG"
-		color = ansiGray
+		color = AnsiGray
 	}
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	fmt.Fprintf(h.w, "%s[%s]%s %s", color, label, ansiReset, r.Message)
+	fmt.Fprintf(h.w, "%s[%s]%s %s", color, label, AnsiReset, r.Message)
 
 	r.Attrs(func(a slog.Attr) bool {
 		if a.Value.Kind() != slog.KindGroup {

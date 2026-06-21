@@ -22,6 +22,47 @@ func apkFilename(project *entity.Project, env string) string {
 	return fmt.Sprintf("%s-%s-%s.apk", slug, project.Version, env)
 }
 
+// resolveKeystorePath finds the keystore: project-local first, then fallback to config.
+func resolveKeystorePath(projectPath, cfgKeystore string) string {
+	keystorePath := filepath.Join(projectPath, "secret", "project.keystore")
+	if _, err := os.Stat(keystorePath); os.IsNotExist(err) {
+		return cfgKeystore
+	}
+	return keystorePath
+}
+
+// validateKeystorePassword verifies the keystore password before build starts.
+// Returns nil if valid, error if invalid or keystore not found.
+func validateKeystorePassword(keystorePath, password string) error {
+	if _, err := os.Stat(keystorePath); os.IsNotExist(err) {
+		return fmt.Errorf("keystore not found at %s: %w", keystorePath, errors.ErrKeystoreNotFound)
+	}
+
+	if password == "" {
+		return fmt.Errorf("keystore password required: %w", errors.ErrKeystoreInvalidPass)
+	}
+
+	// Use keytool to verify password by listing keystore contents
+	cmd := exec.Command("keytool", "-list",
+		"-keystore", keystorePath,
+		"-storepass", password,
+		"-noprompt",
+	)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		logger.Debug("Keystore validation failed", "output", string(output))
+		return fmt.Errorf("keystore password incorrect: %w", errors.ErrKeystoreInvalidPass)
+	}
+
+	// Verify we actually got a valid response
+	if !strings.Contains(string(output), "Keystore type") && !strings.Contains(string(output), "Entry count") {
+		logger.Debug("Keystore validation failed: unexpected output", "output", string(output))
+		return fmt.Errorf("keystore password incorrect: %w", errors.ErrKeystoreInvalidPass)
+	}
+
+	return nil
+}
+
 type BuildProjectUseCase struct {
 	cfg       *config.Config
 	buildRepo repository.BuildRepository
@@ -50,6 +91,7 @@ func NewBuildProjectUseCase(
 type BuildInput struct {
 	ProjectPath string
 	Password    string
+	Guardian    bool // Enable Guardian security protection
 }
 
 func (uc *BuildProjectUseCase) FullBuild(ctx context.Context, input BuildInput) (*entity.BuildResult, error) {
@@ -65,12 +107,14 @@ func (uc *BuildProjectUseCase) FullBuild(ctx context.Context, input BuildInput) 
 		return nil, fmt.Errorf("failed to load project: %w", err)
 	}
 
-	if _, err := os.Stat(uc.cfg.SDKPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("sdk not found: %w", errors.ErrSDKNotFound)
-	}
-
 	if input.Password != "" && len(input.Password) < 6 {
 		return nil, fmt.Errorf("keystore password too short: %w", errors.ErrKeystoreInvalidPass)
+	}
+
+	// Validate keystore password before starting build
+	keystorePath := resolveKeystorePath(input.ProjectPath, uc.cfg.Keystore)
+	if err := validateKeystorePassword(keystorePath, input.Password); err != nil {
+		return nil, err
 	}
 
 	currentHash, err := uc.buildRepo.CalculateProjectHash(ctx, input.ProjectPath)
@@ -88,6 +132,18 @@ func (uc *BuildProjectUseCase) FullBuild(ctx context.Context, input BuildInput) 
 		logger.Warn("APK missing, forcing rebuild", "apk", expectedAPK)
 	}
 
+	// Apply Guardian security if enabled
+	if input.Guardian {
+		project.Security = entity.SecurityConfigForLevel(entity.SecurityLevelStandard)
+		logger.Step("Applying Guardian security protection...")
+
+		// Encrypt assets
+		encryptor := &AssetEncryptor{}
+		if err := encryptor.EncryptAssets(input.ProjectPath, input.Password); err != nil {
+			logger.Warn("Asset encryption failed", "error", err)
+		}
+	}
+
 	result := uc.executeBuild(ctx, project, input)
 	if result.Success {
 		uc.buildRepo.SaveCache(ctx, input.ProjectPath, &entity.BuildCache{Hash: currentHash})
@@ -103,6 +159,13 @@ func (uc *BuildProjectUseCase) AssetsOnlyBuild(ctx context.Context, input BuildI
 	project, err := uc.projRepo.Load(ctx, input.ProjectPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load project: %w", err)
+	}
+
+	// Validate keystore password before starting build
+	keystorePath := resolveKeystorePath(input.ProjectPath, uc.cfg.Keystore)
+	if err := validateKeystorePassword(keystorePath, input.Password); err != nil {
+		logger.Error("Keystore validation failed", "error", err)
+		return nil, err
 	}
 
 	releaseAPK := apkFilename(project, "release")
@@ -138,11 +201,6 @@ func (uc *BuildProjectUseCase) AssetsOnlyBuild(ctx context.Context, input BuildI
 
 	if err := zipDir(extractDir, devAPK); err != nil {
 		return nil, fmt.Errorf("failed to repackage APK: %w", err)
-	}
-
-	keystorePath := filepath.Join(input.ProjectPath, "secret", "project.keystore")
-	if _, err := os.Stat(keystorePath); os.IsNotExist(err) {
-		keystorePath = uc.cfg.Keystore
 	}
 
 	apksignerPath, err := uc.tools.ApkSigner(ctx)
@@ -237,6 +295,11 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 
 	kotlinDir := filepath.Join(projPath, "src", "main", "kotlin")
 
+	// If Guardian is enabled, copy security templates to project
+	if input.Guardian {
+		uc.injectSecurityTemplates(ctx, project, projPath)
+	}
+
 	logger.Step("Compiling Kotlin sources...")
 	os.MkdirAll(objDir, 0o755)
 	kotlinCmd := exec.CommandContext(ctx, kotlincPath,
@@ -246,6 +309,16 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 	)
 	if out, err := uc.executeOutput(kotlinCmd); err != nil {
 		return failedResult(entity.BuildPhaseKotlinCompile, string(out))
+	}
+
+	// Obfuscate code with ProGuard if Guardian is enabled
+	if input.Guardian {
+		obfuscator := NewProGuardObfuscator()
+		if obfuscator.IsAvailable() {
+			if err := obfuscator.Obfuscate(ctx, objDir, sdkPath, ""); err != nil {
+				logger.Warn("ProGuard obfuscation failed", "error", err)
+			}
+		}
 	}
 
 	logger.Step("Converting to DEX (D8)...")
@@ -277,10 +350,7 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 		return failedResult(entity.BuildPhaseZipalign, string(out))
 	}
 
-	keystorePath := filepath.Join(projPath, "secret", "project.keystore")
-	if _, err := os.Stat(keystorePath); os.IsNotExist(err) {
-		keystorePath = uc.cfg.Keystore
-	}
+	keystorePath := resolveKeystorePath(projPath, uc.cfg.Keystore)
 
 	logger.Step("Signing APK...")
 	signArgs := strings.Fields(apksignerPath)
@@ -304,7 +374,7 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 		os.Remove(classesDex)
 	}
 
-	logger.Success("Build complete", "apk", finalPath)
+	logger.Success("Build completed")
 	return &entity.BuildResult{Success: true, APKPath: finalPath}
 }
 
@@ -334,6 +404,42 @@ func (uc *BuildProjectUseCase) PushAssetToDevice(ctx context.Context, projectPat
 	broadcastCmd.Run()
 
 	return nil
+}
+
+// injectSecurityTemplates copies security templates to the project.
+func (uc *BuildProjectUseCase) injectSecurityTemplates(ctx context.Context, project *entity.Project, projPath string) {
+	securityDir := filepath.Join(projPath, "src", "main", "kotlin",
+		strings.ReplaceAll(project.PackageName, ".", "/"), "security")
+	os.MkdirAll(securityDir, 0o755)
+
+	// List of security templates to inject
+	securityTemplates := []string{
+		"GuardianBridge.kt.tmpl",
+		"RASPSecurityModule.kt.tmpl",
+		"CertificatePinner.kt.tmpl",
+		"IntegrityVerifier.kt.tmpl",
+		"StringObfuscator.kt.tmpl",
+	}
+
+	for _, tmpl := range securityTemplates {
+		tmplPath := filepath.Join(uc.cfg.TAMKHome, "templates", "security", "kotlin", tmpl)
+		tmplContent, err := os.ReadFile(tmplPath)
+		if err != nil {
+			logger.Debug("Security template not found", "template", tmpl)
+			continue
+		}
+
+		// Replace package placeholder
+		content := strings.ReplaceAll(string(tmplContent), "{{PACKAGE}}", project.PackageName)
+
+		// Write to security directory
+		outName := strings.Replace(tmpl, ".tmpl", "", 1)
+		if err := os.WriteFile(filepath.Join(securityDir, outName), []byte(content), 0o644); err != nil {
+			logger.Debug("Failed to write security template", "template", outName, "error", err)
+		}
+	}
+
+	logger.Debug("Security templates injected", "dir", securityDir, "count", len(securityTemplates))
 }
 
 func (uc *BuildProjectUseCase) execute(cmd *exec.Cmd) error {

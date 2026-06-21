@@ -143,13 +143,17 @@ func (uc *SetupEnvironmentUseCase) downloadSDK(ctx context.Context) error {
 		return fmt.Errorf("failed to extract SDK: %s: %w", string(outBytes), err)
 	}
 
-	platformDir := filepath.Join(extractDir, "platform-30")
-	if _, err := os.Stat(platformDir); err == nil {
-		jarPath := filepath.Join(platformDir, "android.jar")
-		if _, err := os.Stat(jarPath); err == nil {
-			os.Rename(jarPath, uc.cfg.SDKPath)
+	// Find and move android.jar from extracted subdirectory
+	entries, _ := os.ReadDir(extractDir)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			jarPath := filepath.Join(extractDir, entry.Name(), "android.jar")
+			if _, err := os.Stat(jarPath); err == nil {
+				os.Rename(jarPath, uc.cfg.SDKPath)
+				os.RemoveAll(filepath.Join(extractDir, entry.Name()))
+				break
+			}
 		}
-		os.RemoveAll(platformDir)
 	}
 
 	os.Remove(zipPath)

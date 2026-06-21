@@ -11,6 +11,7 @@ _Maintained by MiMoCode agent. Updated after significant changes._
 - **2026-06-20**: T2T analysis completed. Fixed 25 discrepancies in AGENTS.md, 8 in documentation/ files, 1 Makefile bug. Created `doc-audit` skill.
 - **2026-06-20**: Applied clean code fixes. Created 7 GitHub Actions workflows.
 - **2026-06-20**: Implemented ToolManager Lazy Extraction ecosystem. Updated project_build.go to use ToolManager.
+- **2026-06-21**: Implemented "Setup Once, Run Forever" architecture. Added `tamk run` for native Kotlin execution. Reorganized templates into xml/kotlin/css/js subdirectories. Created platform-specific installers. Reset version to 1.0.0. Updated PRD/workflow.md.
 - **2026-06-21**: Implemented "Setup Once, Run Forever" architecture. Reset version to 1.0.0. Created platform-specific installers. Implemented `tamk run` command. Fixed console project config.
 
 ## Applied Clean Code Fixes (2026-06-20)

@@ -65,6 +65,9 @@ env/
 tmp/
 temp/
 dump.md
+secrets_report.json
+*.tar.gz
+*.zip
 
 # =============================================================================
 # Python (legacy — kept defensively)

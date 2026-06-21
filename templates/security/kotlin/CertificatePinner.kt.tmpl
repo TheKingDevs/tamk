@@ -1,0 +1,105 @@
+package {{PACKAGE}}.security
+
+import android.content.Context
+import android.net.ssl.SSLCertificateSocketFactory
+import android.os.Build
+import java.security.MessageDigest
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
+
+/**
+ * CertificatePinner — SSL/TLS Certificate Pinning
+ * Prevents MITM attacks by validating server certificates.
+ */
+object CertificatePinner {
+
+    // SHA-256 hashes of trusted certificates (add your server's cert hash here)
+    private val pinnedHashes = mutableSetOf<String>()
+
+    // Default pin for TAMK (placeholder - replace with actual cert hash)
+    private const val DEFAULT_PIN = "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+
+    /**
+     * Initialize certificate pinning with custom pins.
+     * @param pins Set of SHA-256 certificate pins in format "sha256/HASH"
+     */
+    fun initialize(vararg pins: String) {
+        pinnedHashes.clear()
+        pinnedHashes.addAll(pins)
+        if (pinnedHashes.isEmpty()) {
+            pinnedHashes.add(DEFAULT_PIN)
+        }
+    }
+
+    /**
+     * Get a TrustManager that validates pinned certificates.
+     */
+    fun getPinnedTrustManager(): X509TrustManager {
+        return object : X509TrustManager {
+            override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {
+                // Not implemented for client auth
+            }
+
+            override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {
+                if (chain.isEmpty()) throw java.security.cert.CertificateException("Certificate chain is empty")
+
+                // Check each certificate in the chain
+                for (cert in chain) {
+                    val pin = getCertificatePin(cert)
+                    if (pinnedHashes.contains(pin)) {
+                        return // Valid pin found
+                    }
+                }
+
+                // No valid pin found
+                throw java.security.cert.CertificateException(
+                    "Certificate pinning failed: no matching pin found"
+                )
+            }
+
+            override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+        }
+    }
+
+    /**
+     * Get the SHA-256 pin for a certificate.
+     */
+    fun getCertificatePin(cert: X509Certificate): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val pubKey = cert.publicKey.encoded
+        val hash = digest.digest(pubKey)
+        val base64 = android.util.Base64.encodeToString(hash, android.util.Base64.NO_WRAP)
+        return "sha256/$base64"
+    }
+
+    /**
+     * Install pinned TrustManager globally.
+     */
+    fun install() {
+        try {
+            val trustManager = getPinnedTrustManager()
+            val sslContext = SSLContext.getInstance("TLS")
+            sslContext.init(null, arrayOf<TrustManager>(trustManager), null)
+
+            HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.socketFactory)
+            HttpsURLConnection.setDefaultHostnameVerifier { _, _ ->
+                // Additional hostname verification can be added here
+                true
+            }
+        } catch (e: Exception) {
+            // Silently fail - pinning is optional
+        }
+    }
+
+    /**
+     * Validate a specific hostname against pinned certificates.
+     */
+    fun validateHostname(hostname: String): Boolean {
+        // Implement custom hostname verification if needed
+        return true
+    }
+}

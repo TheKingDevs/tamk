@@ -13,22 +13,14 @@ import (
 	"github.com/TheKingDevs/tamk/internal/domain/entity"
 	"github.com/TheKingDevs/tamk/internal/domain/valueobject"
 	"github.com/TheKingDevs/tamk/internal/usecase"
+	"github.com/TheKingDevs/tamk/pkg/logger"
 )
 
 var stdinReader = bufio.NewReader(os.Stdin)
 
 const (
-	ansiReset  = "\033[0m"
-	ansiBold   = "\033[1m"
-	ansiDim    = "\033[2m"
-	ansiCyan   = "\033[36m"
-	ansiGreen  = "\033[32m"
-	ansiYellow = "\033[33m"
-	ansiRed    = "\033[31m"
-	ansiGray   = "\033[90m"
-	ansiPurple = "\033[35m"
-	clr        = "\033[2K\r"
-	up         = "\033[A"
+	clr = "\033[2K\r"
+	up  = "\033[A"
 )
 
 func termWidth() int {
@@ -57,7 +49,7 @@ func separator(char, color string, width int) string {
 	if width <= 0 {
 		width = termWidth()
 	}
-	return color + strings.Repeat(char, width) + ansiReset
+	return color + strings.Repeat(char, width) + logger.AnsiReset
 }
 
 func stripANSI(s string) string {
@@ -74,9 +66,9 @@ func readLine() string {
 }
 
 func ask(question, defaultVal string) string {
-	prompt := ansiCyan + ansiBold + question + ansiReset +
-		" " + ansiGray + "(" + defaultVal + ")" + ansiReset +
-		" " + ansiCyan + "❯" + ansiReset + " "
+	prompt := logger.AnsiCyan + logger.AnsiBold + question + logger.AnsiReset +
+		" " + logger.AnsiGray + "(" + defaultVal + ")" + logger.AnsiReset +
+		" " + logger.AnsiCyan + "❯" + logger.AnsiReset + " "
 	os.Stdout.WriteString(clr + "  " + prompt)
 
 	input := readLine()
@@ -87,8 +79,8 @@ func ask(question, defaultVal string) string {
 }
 
 func askSecret(question string) string {
-	prompt := ansiYellow + ansiBold + question + ansiReset +
-		" " + ansiYellow + "❯" + ansiReset + " "
+	prompt := logger.AnsiYellow + logger.AnsiBold + question + logger.AnsiReset +
+		" " + logger.AnsiYellow + "❯" + logger.AnsiReset + " "
 	os.Stdout.WriteString(clr + "  " + prompt)
 
 	exec.Command("stty", "-echo").Run()
@@ -106,15 +98,15 @@ func showBanner() {
 	if art != "" {
 		fmt.Println(art)
 	} else {
-		fmt.Println(center(ansiCyan+"  ╔══════════════════════════════╗"+ansiReset, w))
-		fmt.Println(center(ansiCyan+"  ║     T.A.M.K v"+config.Version+"     ║"+ansiReset, w))
-		fmt.Println(center(ansiCyan+"  ╚══════════════════════════════╝"+ansiReset, w))
+		fmt.Println(center(logger.AnsiCyan+"  ╔══════════════════════════════╗"+logger.AnsiReset, w))
+		fmt.Println(center(logger.AnsiCyan+"  ║     T.A.M.K v"+config.Version+"     ║"+logger.AnsiReset, w))
+		fmt.Println(center(logger.AnsiCyan+"  ╚══════════════════════════════╝"+logger.AnsiReset, w))
 	}
 	fmt.Println()
-	fmt.Println(center(ansiGray+ansiDim+"Termux APK Manager Kit"+ansiReset, w))
-	fmt.Println(center(ansiGray+ansiDim+"Terminal Wizard"+ansiReset, w))
+	fmt.Println(center(logger.AnsiGray+logger.AnsiDim+"Termux APK Manager Kit"+logger.AnsiReset, w))
+	fmt.Println(center(logger.AnsiGray+logger.AnsiDim+"Terminal Wizard"+logger.AnsiReset, w))
 	fmt.Println()
-	fmt.Println(center(separator("─", ansiGray, 0), w))
+	fmt.Println(center(separator("─", logger.AnsiGray, 0), w))
 	fmt.Println()
 }
 
@@ -126,23 +118,23 @@ func renderArt(text string, width int) string {
 	lines := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
 	var result []string
 	for _, line := range lines {
-		result = append(result, center(ansiCyan+line+ansiReset, width))
+		result = append(result, center(logger.AnsiCyan+line+logger.AnsiReset, width))
 	}
 	return strings.Join(result, "\n")
 }
 
 func showSuccessBanner(name, projType, projPath, pkg string) {
 	fmt.Println()
-	fmt.Println("  " + ansiGreen + separator("═", ansiGreen, 0) + ansiReset)
-	fmt.Println(clr + "  " + ansiGreen + "✅  PROJETO '" + ansiBold + name + ansiReset + ansiGreen + "' CRIADO!" + ansiReset)
-	fmt.Println("  " + ansiGreen + separator("═", ansiGreen, 0) + ansiReset)
+	fmt.Println("  " + logger.AnsiGreen + separator("═", logger.AnsiGreen, 0) + logger.AnsiReset)
+	fmt.Println(clr + "  " + logger.AnsiGreen + "✅  PROJETO '" + logger.AnsiBold + name + logger.AnsiReset + logger.AnsiGreen + "' CRIADO!" + logger.AnsiReset)
+	fmt.Println("  " + logger.AnsiGreen + separator("═", logger.AnsiGreen, 0) + logger.AnsiReset)
 	fmt.Println()
-	fmt.Println("  " + ansiCyan + "▸" + ansiReset + " Tipo: " + ansiBold + projType + ansiReset)
-	fmt.Println("  " + ansiCyan + "▸" + ansiReset + " Pacote: " + ansiBold + pkg + ansiReset)
-	fmt.Println("  " + ansiCyan + "▸" + ansiReset + " Destino: " + ansiBold + projPath + ansiReset)
+	fmt.Println("  " + logger.AnsiCyan + "▸" + logger.AnsiReset + " Tipo: " + logger.AnsiBold + projType + logger.AnsiReset)
+	fmt.Println("  " + logger.AnsiCyan + "▸" + logger.AnsiReset + " Pacote: " + logger.AnsiBold + pkg + logger.AnsiReset)
+	fmt.Println("  " + logger.AnsiCyan + "▸" + logger.AnsiReset + " Destino: " + logger.AnsiBold + projPath + logger.AnsiReset)
 	fmt.Println()
-	fmt.Println("  " + ansiGray + separator("─", ansiGray, 0) + ansiReset)
-	fmt.Println("  " + ansiYellow + ansiBold + "Próximo passo:" + ansiReset + " " + ansiGray + "cd " + name + " && tamk build -p <senha>" + ansiReset)
+	fmt.Println("  " + logger.AnsiGray + separator("─", logger.AnsiGray, 0) + logger.AnsiReset)
+	fmt.Println("  " + logger.AnsiYellow + logger.AnsiBold + "Próximo passo:" + logger.AnsiReset + " " + logger.AnsiGray + "cd " + name + " && tamk build -p <senha>" + logger.AnsiReset)
 	fmt.Println()
 }
 
@@ -158,7 +150,7 @@ func createProjectInteractive(ctx context.Context, uc *usecase.CreateProjectUseC
 		if _, err := valueobject.NewProjectName(name); err == nil {
 			break
 		}
-		fmt.Printf(up + clr + "  " + ansiRed + "✖" + ansiReset + " Invalid name. Use letters, numbers, hyphens.\n")
+		fmt.Printf(up + clr + "  " + logger.AnsiRed + "✖" + logger.AnsiReset + " Invalid name. Use letters, numbers, hyphens.\n")
 	}
 
 	author = ask("Author", "Developer")
@@ -168,18 +160,18 @@ func createProjectInteractive(ctx context.Context, uc *usecase.CreateProjectUseC
 		if _, err := valueobject.ParseVersion(version); err == nil {
 			break
 		}
-		fmt.Printf(up + clr + "  " + ansiRed + "✖" + ansiReset + " Invalid version. Use MAJOR.MINOR.PATCH (e.g. 1.0.0)\n")
+		fmt.Printf(up + clr + "  " + logger.AnsiRed + "✖" + logger.AnsiReset + " Invalid version. Use MAJOR.MINOR.PATCH (e.g. 1.0.0)\n")
 	}
 
 	fmt.Println()
-	fmt.Println("  " + ansiBold + ansiYellow + "SELECT ENGINE" + ansiReset)
+	fmt.Println("  " + logger.AnsiBold + logger.AnsiYellow + "SELECT ENGINE" + logger.AnsiReset)
 	fmt.Println()
-	fmt.Printf("  %s[1]%s Standard Console\n", ansiCyan, ansiReset)
-	fmt.Printf("    %s└─%s CLI scripts and automation\n\n", ansiGray, ansiReset)
-	fmt.Printf("  %s[2]%s Native Android (UI/APK)\n", ansiGreen, ansiReset)
-	fmt.Printf("    %s└─%s Native XML/Kotlin interface\n\n", ansiGray, ansiReset)
-	fmt.Printf("  %s[3]%s Universal WebApp (HTML/JS)\n", ansiPurple, ansiReset)
-	fmt.Printf("    %s└─%s Hybrid WebView\n\n", ansiGray, ansiReset)
+	fmt.Printf("  %s[1]%s Standard Console\n", logger.AnsiCyan, logger.AnsiReset)
+	fmt.Printf("    %s└─%s CLI scripts and automation\n\n", logger.AnsiGray, logger.AnsiReset)
+	fmt.Printf("  %s[2]%s Native Android (UI/APK)\n", logger.AnsiGreen, logger.AnsiReset)
+	fmt.Printf("    %s└─%s Native XML/Kotlin interface\n\n", logger.AnsiGray, logger.AnsiReset)
+	fmt.Printf("  %s[3]%s Universal WebApp (HTML/JS)\n", logger.AnsiPurple, logger.AnsiReset)
+	fmt.Printf("    %s└─%s Hybrid WebView\n\n", logger.AnsiGray, logger.AnsiReset)
 
 	choice := ask("Engine (1-3)", "2")
 	switch strings.TrimSpace(choice) {
@@ -194,10 +186,10 @@ func createProjectInteractive(ctx context.Context, uc *usecase.CreateProjectUseC
 	webURL = "file:///android_asset/index.html"
 	if projType == entity.ProjectTypeWebApp {
 		fmt.Println()
-		fmt.Println("  " + ansiBold + ansiYellow + "WEB CONTENT TYPE" + ansiReset)
+		fmt.Println("  " + logger.AnsiBold + logger.AnsiYellow + "WEB CONTENT TYPE" + logger.AnsiReset)
 		fmt.Println()
-		fmt.Printf("  %s[1]%s Internal (assets/ folder)\n", ansiCyan, ansiReset)
-		fmt.Printf("  %s[2]%s External (Remote URL)\n\n", ansiPurple, ansiReset)
+		fmt.Printf("  %s[1]%s Internal (assets/ folder)\n", logger.AnsiCyan, logger.AnsiReset)
+		fmt.Printf("  %s[2]%s External (Remote URL)\n\n", logger.AnsiPurple, logger.AnsiReset)
 
 		mode := ask("Option", "1")
 		if strings.TrimSpace(mode) == "2" {
@@ -207,7 +199,7 @@ func createProjectInteractive(ctx context.Context, uc *usecase.CreateProjectUseC
 				if strings.HasPrefix(webURL, "http://") || strings.HasPrefix(webURL, "https://") {
 					break
 				}
-				fmt.Printf(up + clr + "  " + ansiRed + "✖" + ansiReset + " URL must start with http:// or https://\n")
+				fmt.Printf(up + clr + "  " + logger.AnsiRed + "✖" + logger.AnsiReset + " URL must start with http:// or https://\n")
 			}
 		} else {
 			webMode = entity.WebContentInternal
@@ -217,14 +209,14 @@ func createProjectInteractive(ctx context.Context, uc *usecase.CreateProjectUseC
 	pwd := password
 	if pwd == "" && (projType == entity.ProjectTypeWebApp || projType == entity.ProjectTypeUIAPK) {
 		fmt.Println()
-		fmt.Println("  " + ansiBold + ansiYellow + "⚠ SECURITY: Keystore password" + ansiReset)
-		fmt.Println("    " + ansiGray + "(minimum 6 characters)" + ansiReset)
+		fmt.Println("  " + logger.AnsiBold + logger.AnsiYellow + "⚠ SECURITY: Keystore password" + logger.AnsiReset)
+		fmt.Println("    " + logger.AnsiGray + "(minimum 6 characters)" + logger.AnsiReset)
 		for {
 			pwd = askSecret("Keystore password")
 			if len(pwd) >= 6 {
 				break
 			}
-			fmt.Printf(up + clr + "  " + ansiRed + "✖" + ansiReset + " Password must be at least 6 characters\n")
+			fmt.Printf(up + clr + "  " + logger.AnsiRed + "✖" + logger.AnsiReset + " Password must be at least 6 characters\n")
 		}
 	}
 
