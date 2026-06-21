@@ -1,6 +1,6 @@
 # 🏗️ T.A.M.K Architecture
 
-> **Version:** 2026.3.0-HMR — Complete internal architecture and data flow documentation.
+> **Version:** 1.0.0 — Complete internal architecture and data flow documentation.
 
 ---
 
@@ -211,7 +211,7 @@ sequenceDiagram
 ### `Config` (`internal/config/config.go`)
 
 ```go
-const Version = "2026.3.0-HMR"
+const Version = "1.0.0"
 
 type Config struct {
     Version  string
@@ -279,5 +279,5 @@ type Config struct {
 ---
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — Architecture Documentation</sub>
+  <sub>T.A.M.K v1.0.0 — Architecture Documentation</sub>
 </div>

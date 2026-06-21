@@ -223,5 +223,5 @@ class MainActivity : Activity() {
 <!-- Templates HTML/CSS/JS estão nos arquivos .tmpl correspondentes -->
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — Templates WebApp</sub>
+  <sub>T.A.M.K v1.0.0 — Templates WebApp</sub>
 </div>

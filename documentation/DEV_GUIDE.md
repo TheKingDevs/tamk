@@ -297,5 +297,5 @@ tamk build -p $KEYSTORE_PASS
 ---
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — Guia de Desenvolvimento</sub>
+  <sub>T.A.M.K v1.0.0 — Guia de Desenvolvimento</sub>
 </div>

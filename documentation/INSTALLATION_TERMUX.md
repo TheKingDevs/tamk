@@ -295,5 +295,5 @@ export PATH="$HOME/tamk/bin:$PATH"
 ---
 
 <div align="center">
-  <sub>TAMK v2026.3.0-HMR | Termux Edition</sub>
+  <sub>TAMK v1.0.0 | Termux Edition</sub>
 </div>

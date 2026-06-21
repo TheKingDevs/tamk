@@ -1,6 +1,6 @@
 app:
   name: tamk
-  version: "2026.3.0-HMR"
+  version: "1.0.0"
   environment: "termux"
 
 sdk:

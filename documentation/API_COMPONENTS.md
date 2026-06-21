@@ -1,6 +1,6 @@
 # 📋 API Components — Complete Reference
 
-> **Version:** 2026.3.0-HMR — Technical reference for packages, templates, and utilities of T.A.M.K.
+> **Version:** 1.0.0 — Technical reference for packages, templates, and utilities of T.A.M.K.
 
 ---
 
@@ -146,10 +146,10 @@ func zipDir(source, target string) error  // Archive helper (zipDir)
 ### `internal/config/config.go`
 
 ```go
-const Version = "2026.3.0-HMR"
+const Version = "1.0.0"
 
 type Config struct {
-    Version    string       // "2026.3.0-HMR"
+    Version    string       // "1.0.0"
     Env        Environment  // "termux" | "debian" | "ubuntu" | "arch" | "fedora" | "unknown"
     EnvType    string       // TAMK_ENV env var
     TAMKHome   string       // Installation root
@@ -221,7 +221,7 @@ func (c *Config) DetectPackageName(author, name string) string
 | `{{DEV_MODE}}` | WebApp | `false` |
 | `{{MIN_SDK}}` | WebApp | `21` |
 | `{{TARGET_SDK}}` | WebApp | `30` |
-| `{{TAMK_VERSION}}` | WebApp | `2026.3.0-HMR` |
+| `{{TAMK_VERSION}}` | WebApp | `1.0.0` |
 | `{{DEV_PORT}}` | dev_bridge.js | `8765` |
 
 ---
@@ -284,7 +284,7 @@ version=1.0.0
 author=AuthorName
 package=com.author.name
 web_url=file:///android_asset/index.html
-created_with=2026.3.0-HMR
+created_with=1.0.0
 ```
 
 ### CLI Exit Codes
@@ -305,5 +305,5 @@ created_with=2026.3.0-HMR
 ---
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — Reference Documentation</sub>
+  <sub>T.A.M.K v1.0.0 — Reference Documentation</sub>
 </div>

@@ -4,7 +4,7 @@ All notable changes. Format based on [Keep a Changelog](https://keepachangelog.c
 
 ---
 
-## [2026.3.0-HMR] - 2026-06-18
+## [1.0.0] - 2026-06-18
 
 ### ✨ Added
 
@@ -94,7 +94,7 @@ All notable changes. Format based on [Keep a Changelog](https://keepachangelog.c
 
 - DevController: `_on_file_changed()` with per-type HMR
 - `_quick_assets_build()` with reload notification
-- `dev_bridge.js.tmpl` updated for 2026.3.0-HMR
+- `dev_bridge.js.tmpl` updated for 1.0.0
 
 ---
 
@@ -179,5 +179,5 @@ All notable changes. Format based on [Keep a Changelog](https://keepachangelog.c
 ---
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — Changelog</sub>
+  <sub>T.A.M.K v1.0.0 — Changelog</sub>
 </div>

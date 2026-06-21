@@ -17,10 +17,10 @@ Baixe o arquivo ZIP mais recente:
 
 ```bash
 # Usando curl
-curl -O https://seu-servidor.com/tamk-proprietary-2026.3.0-HMR-macos.zip
+curl -O https://seu-servidor.com/tamk-proprietary-1.0.0-macos.zip
 
 # Ou usando wget
-wget https://seu-servidor.com/tamk-proprietary-2026.3.0-HMR-macos.zip
+wget https://seu-servidor.com/tamk-proprietary-1.0.0-macos.zip
 ```
 
 Ou clique direto do navegador para baixar.
@@ -29,7 +29,7 @@ Ou clique direto do navegador para baixar.
 
 ```bash
 # Extrair (automático no Finder, ou via terminal)
-unzip tamk-proprietary-2026.3.0-HMR-macos.zip
+unzip tamk-proprietary-1.0.0-macos.zip
 
 # Entrar no diretório
 cd tamk
@@ -253,5 +253,5 @@ Se encontrar problemas:
 ---
 
 <div align="center">
-  <sub>TAMK v2026.3.0-HMR | Instalação macOS</sub>
+  <sub>TAMK v1.0.0 | Instalação macOS</sub>
 </div>

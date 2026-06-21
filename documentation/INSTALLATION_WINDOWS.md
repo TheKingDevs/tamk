@@ -16,7 +16,7 @@ Guia completo para instalar o T.A.M.K (Termux APK Manager Kit) no Windows 10/11.
 Baixe o arquivo ZIP mais recente:
 
 ```
-https://seu-servidor.com/tamk-proprietary-2026.3.0-HMR-windows.zip
+https://seu-servidor.com/tamk-proprietary-1.0.0-windows.zip
 ```
 
 ### 2. Extrair o Arquivo
@@ -195,8 +195,8 @@ Se usará TAMK no WSL, siga o guia de **Instalação Linux**:
 ```bash
 # Dentro do WSL
 wsl
-wget https://seu-servidor.com/tamk-proprietary-2026.3.0-HMR-linux.zip
-unzip tamk-proprietary-2026.3.0-HMR-linux.zip
+wget https://seu-servidor.com/tamk-proprietary-1.0.0-linux.zip
+unzip tamk-proprietary-1.0.0-linux.zip
 sudo ./install.sh
 ```
 
@@ -219,5 +219,5 @@ Se encontrar problemas:
 ---
 
 <div align="center">
-  <sub>TAMK v2026.3.0-HMR | Instalação Windows</sub>
+  <sub>TAMK v1.0.0 | Instalação Windows</sub>
 </div>

@@ -7,7 +7,7 @@ Guia de instalação do T.A.M.K em todos os sistemas.
 ## 🐧 Linux
 
 ```bash
-unzip tamk-proprietary-2026.3.0-HMR-linux.zip
+unzip tamk-proprietary-1.0.0-linux.zip
 cd tamk
 sudo ./install.sh
 tamk version
@@ -31,7 +31,7 @@ tamk version
 ## 🍎 macOS
 
 ```bash
-unzip tamk-proprietary-2026.3.0-HMR-macos.zip
+unzip tamk-proprietary-1.0.0-macos.zip
 cd tamk
 chmod +x install.sh
 sudo ./install.sh
@@ -103,5 +103,5 @@ rm -rf $PREFIX/opt/tamk ~/.tamk_cache
 ---
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — Instalação</sub>
+  <sub>T.A.M.K v1.0.0 — Instalação</sub>
 </div>

@@ -1,7 +1,7 @@
 # Product Requirements Document — T.A.M.K Go
 
 ## Visão Geral
-T.A.M.K (Termux APK Manager Kit) v2026.3.0-HMR — framework para desenvolvimento Android nativo diretamente no Termux. Escrito em Go com Clean Architecture v4. Permite criar, compilar, assinar e instalar APKs Android sem um PC.
+T.A.M.K (Termux APK Manager Kit) v1.0.0 — framework para desenvolvimento Android nativo diretamente no Termux. Escrito em Go com Clean Architecture v4. Permite criar, compilar, assinar e instalar APKs Android sem um PC.
 
 ## Funcionalidades (MVP)
 

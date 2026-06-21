@@ -214,5 +214,5 @@ TAMK_HMR.accept(() => {
 ---
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — Exemplos Práticos</sub>
+  <sub>T.A.M.K v1.0.0 — Exemplos Práticos</sub>
 </div>

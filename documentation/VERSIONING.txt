@@ -1,13 +1,13 @@
 # Versionamento
 
-**Versão atual:** `2026.3.0-HMR`
+**Versão atual:** `1.0.0`
 
 ## Esquema
 
 ```
 YYYY.MAJOR.MINOR[-SUFIXO]
 
-2026.3.0-HMR
+1.0.0
 ├── 2026: Ano de release
 │   └── 3: Major (mudanças significativas)
 │       └── 0: Minor (features)
@@ -27,7 +27,7 @@ YYYY.MAJOR.MINOR[-SUFIXO]
 
 | Versão | Data | Destaque |
 | :--- | :--- | :--- |
-| `2026.3.0-HMR` | 2026-06-18 | HMR completo, update system, docs |
+| `1.0.0` | 2026-06-18 | HMR completo, update system, docs |
 | `2.3.2` | 2026-03-29 | Correção path instalação |
 | `2.3.1` | 2026-03-29 | Logo + banner fixes |
 | `2.3.0` | 2026-03-29 | HMR inicial |

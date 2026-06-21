@@ -1,6 +1,6 @@
 # 📂 Complete T.A.M.K Project Structure
 
-> Full mapping of all files and directories of T.A.M.K v2026.3.0-HMR, now built with Go and Clean Architecture v4.
+> Full mapping of all files and directories of T.A.M.K v1.0.0, now built with Go and Clean Architecture v4.
 
 ---
 
@@ -228,5 +228,5 @@ MeuConsole/
 ---
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — Project Structure</sub>
+  <sub>T.A.M.K v1.0.0 — Project Structure</sub>
 </div>

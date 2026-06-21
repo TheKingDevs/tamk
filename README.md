@@ -1,13 +1,13 @@
 # T.A.M.K — Termux APK Manager Kit
 
-T.A.M.K (Termux APK Manager Kit) v2026.3.0-HMR — framework de automacao para desenvolvimento Android nativo diretamente no Termux. Escrito em Go com Clean Architecture v4. Permite criar, compilar, assinar e instalar APKs Android sem um PC.
+T.A.M.K (Termux APK Manager Kit) v1.0.0 — framework de automacao para desenvolvimento Android nativo diretamente no Termux. Escrito em Go com Clean Architecture v4. Permite criar, compilar, assinar e instalar APKs Android sem um PC.
 
 <p align="center">
   <img src="assets/images/logo.png" alt="T.A.M.K Logo" width="300">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-2026.3.0--HMR-blueviolet?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Version-1.0.0-blueviolet?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/Go-1.26-blue?style=for-the-badge&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/github/actions/workflow/status/TheKingDevs/tamk/ci.yml?style=for-the-badge&label=CI" alt="CI">
@@ -266,5 +266,5 @@ CLI (Cobra) → Use Cases → Domain Entities → Templates → Projeto Gerado
 ---
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — Feito com ❤️ por @mrx_dev</sub>
+  <sub>T.A.M.K v1.0.0 — Feito com ❤️ por @mrx_dev</sub>
 </div>

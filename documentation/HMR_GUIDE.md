@@ -1,6 +1,6 @@
 # 🔄 HMR — Hot Module Replacement Guide
 
-> **Versão:** 2026.3.0-HMR — Guia rápido de referência do sistema HMR.
+> **Versão:** 1.0.0 — Guia rápido de referência do sistema HMR.
 
 ---
 
@@ -162,5 +162,5 @@ src/main/assets/
 ---
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — HMR Guide</sub>
+  <sub>T.A.M.K v1.0.0 — HMR Guide</sub>
 </div>

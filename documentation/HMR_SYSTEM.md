@@ -1,6 +1,6 @@
 # Hot Module Replacement (HMR) — Sistema de Desenvolvimento em Tempo Real
 
-**Versao:** 2026.3.0-HMR
+**Versao:** 1.0.0
 **Status:** Em desenvolvimento
 **Aplica-se a:** WebApps (HTML/CSS/JS)
 

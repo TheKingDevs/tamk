@@ -16,17 +16,17 @@ Baixe o arquivo ZIP mais recente:
 
 ```bash
 # Opção 1: Usando wget
-wget https://seu-servidor.com/tamk-proprietary-2026.3.0-HMR-linux.zip
+wget https://seu-servidor.com/tamk-proprietary-1.0.0-linux.zip
 
 # Opção 2: Usando curl
-curl -O https://seu-servidor.com/tamk-proprietary-2026.3.0-HMR-linux.zip
+curl -O https://seu-servidor.com/tamk-proprietary-1.0.0-linux.zip
 ```
 
 ### 2. Extrair e Instalar
 
 ```bash
 # Extrair o arquivo
-unzip tamk-proprietary-2026.3.0-HMR-linux.zip
+unzip tamk-proprietary-1.0.0-linux.zip
 
 # Oferecer permissão ao script
 chmod +x install.sh
@@ -162,5 +162,5 @@ Se encontrar problemas:
 ---
 
 <div align="center">
-  <sub>TAMK v2026.3.0-HMR | Instalação Linux</sub>
+  <sub>TAMK v1.0.0 | Instalação Linux</sub>
 </div>

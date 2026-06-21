@@ -1,6 +1,6 @@
 # T.A.M.K — Agent Instructions
 
-**T.A.M.K (Termux APK Manager Kit)** v2026.3.0-HMR — Professional automation framework for native Android app development directly in Termux. Built with Go and Kotlin.
+**T.A.M.K (Termux APK Manager Kit)** v1.0.0 — Professional automation framework for native Android app development directly in Termux. Built with Go and Kotlin.
 
 ## DYNAMIC INDEX
 
@@ -562,7 +562,7 @@ ASCII art logo loaded and rendered during `tamk create` and `tamk version`.
 
 | Feature | Details |
 | :--- | :--- |
-| `Version` | `"2026.3.0-HMR"` |
+| `Version` | `"1.0.0"` |
 | Environment detection | Termux (`/data/data/com.termux`), Debian, Ubuntu, Arch/Manjaro, Fedora, unknown |
 | Secure paths | `SecurePath()` with `filepath.Join()` + `filepath.Clean()` + prefix check |
 | Path validation | Ensures all paths are under home or cwd |
@@ -713,5 +713,5 @@ make setup  # Includes: git config core.hooksPath .githooks
 ---
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — Made with ❤️ by @mrx_dev</sub>
+  <sub>T.A.M.K v1.0.0 — Made with ❤️ by @mrx_dev</sub>
 </div>

@@ -69,5 +69,5 @@ tamk update
 ---
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — Update System</sub>
+  <sub>T.A.M.K v1.0.0 — Update System</sub>
 </div>

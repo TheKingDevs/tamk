@@ -125,5 +125,5 @@ Consulte [CONTRIBUTING.md](CONTRIBUTING.md). Issues, PRs, novos templates e docu
 ---
 
 <div align="center">
-  <sub>T.A.M.K v2026.3.0-HMR — FAQ</sub>
+  <sub>T.A.M.K v1.0.0 — FAQ</sub>
 </div>
