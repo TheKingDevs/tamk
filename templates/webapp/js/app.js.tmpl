@@ -1,60 +1,37 @@
 /**
- * T.A.M.K WebApp - JavaScript Principal
- * Projeto: {{NAME}}
- * Versão: {{VERSION}}
+ * T.A.M.K WebApp - Main JavaScript
+ * Project: {{NAME}}
+ * Version: {{VERSION}}
  */
 
 (function() {
   'use strict';
 
-  // Inicialização do App
-  console.log('[{{NAME}}] App inicializado');
-  console.log('[{{NAME}}] Versão: {{VERSION}}');
+  console.log('[{{NAME}}] App initialized');
+  console.log('[{{NAME}}] Version: {{VERSION}}');
 
-  // Detecta se está em modo desenvolvimento
-  const isDevMode = window.location.hostname === 'localhost' || 
-                    window.location.hostname === '127.0.0.1';
-
-  if (isDevMode) {
-    console.log('[{{NAME}}] Modo desenvolvimento detectado');
-  }
-
-  // Funções utilitárias globais
   window.App = {
     name: '{{NAME}}',
     version: '{{VERSION}}',
     author: '{{AUTHOR}}',
 
-    /**
-     * Exibe informações do app no console
-     */
     info: function() {
-      console.group('📱 {{NAME}}');
-      console.log('Versão: {{VERSION}}');
-      console.log('Autor: {{AUTHOR}}');
+      console.group('{{NAME}}');
+      console.log('Version: {{VERSION}}');
+      console.log('Author: {{AUTHOR}}');
       console.log('Package: {{PACKAGE}}');
-      console.log('Desenvolvido com T.A.M.K v{{TAMK_VERSION}}');
+      console.log('Built with T.A.M.K v{{TAMK_VERSION}}');
       console.groupEnd();
     },
 
-    /**
-     * Navega para uma URL interna
-     * @param {string} path - Caminho relativo
-     */
     navigate: function(path) {
       console.log('[Navigation]', path);
-      // Implementar navegação customizada se necessário
     },
 
-    /**
-     * Carrega dados de forma assíncrona
-     * @param {string} url - URL para fetch
-     * @returns {Promise<any>}
-     */
     fetch: async function(url) {
       try {
-        const response = await window.fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        var response = await window.fetch(url);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
         return await response.json();
       } catch (error) {
         console.error('[Fetch Error]', error);
@@ -63,7 +40,5 @@
     }
   };
 
-  // Auto-executa informações no console
   window.App.info();
-
 })();

@@ -1,0 +1,168 @@
+package {{PACKAGE}}
+
+import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Bundle
+import android.util.Log
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.Toast
+
+class MainActivity : Activity() {
+
+    private lateinit var webView: WebView
+
+    private val refreshReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                ACTION_REFRESH_ASSET -> {
+                    val path = intent.getStringExtra(EXTRA_ASSET_PATH)
+                    refreshAsset(path)
+                }
+                ACTION_REFRESH_ALL -> webView.reload()
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        webView = WebView(this).apply {
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                allowFileAccess = true
+                allowFileAccessFromFileURLs = true
+                allowUniversalAccessFromFileURLs = true
+                cacheMode = WebSettings.LOAD_DEFAULT
+                setSupportZoom(true)
+                builtInZoomControls = true
+                displayZoomControls = false
+            }
+
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    injectDevBridge()
+                }
+
+                override fun onReceivedError(
+                    view: WebView?,
+                    errorCode: Int,
+                    description: String?,
+                    failingUrl: String?
+                ) {
+                    Log.e(TAG, "Error loading $failingUrl: $description")
+                }
+            }
+
+            webChromeClient = object : WebChromeClient() {
+                override fun onConsoleMessage(msg: ConsoleMessage?): Boolean {
+                    msg?.let { Log.d(TAG, "JS: ${it.message()}") }
+                    return true
+                }
+            }
+        }
+
+        setContentView(webView)
+
+        val webUrl = "{{WEB_URL}}"
+        if (webUrl.isEmpty()) {
+            Toast.makeText(this, "URL not configured", Toast.LENGTH_LONG).show()
+            webView.loadData(
+                "<html><body><h1>Error: URL not configured</h1></body></html>",
+                "text/html",
+                "UTF-8"
+            )
+        } else {
+            webView.loadUrl(webUrl)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val filter = IntentFilter().apply {
+            addAction(ACTION_REFRESH_ASSET)
+            addAction(ACTION_REFRESH_ALL)
+        }
+        registerReceiver(refreshReceiver, filter)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(refreshReceiver)
+    }
+
+    private fun injectDevBridge() {
+        val js = """
+            (function() {
+                if (window.__TAMK_HMR) return;
+                window.__TAMK_HMR = {
+                    updateHTML: function(html, sel) {
+                        sel = sel || 'body';
+                        var el = document.querySelector(sel);
+                        if (el) el.innerHTML = html;
+                    }
+                };
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(js, null)
+    }
+
+    private fun refreshAsset(path: String?) {
+        if (path.isNullOrEmpty()) {
+            webView.reload()
+            return
+        }
+        if (path.endsWith(".html") || path.endsWith(".htm")) {
+            val assetPath = "/android_asset/$path"
+            webView.evaluateJavascript(
+                """
+                (function() {
+                    fetch('$assetPath')
+                        .then(function(r) { return r.text(); })
+                        .then(function(html) {
+                            if (window.__TAMK_HMR) {
+                                window.__TAMK_HMR.updateHTML(html, 'body');
+                            } else {
+                                document.body.innerHTML = html;
+                            }
+                        })
+                        .catch(function(e) { console.error('Refresh error:', e); });
+                })();
+                """.trimIndent(),
+                null
+            )
+        } else {
+            webView.reload()
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (::webView.isInitialized && webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    override fun onDestroy() {
+        if (::webView.isInitialized) {
+            webView.stopLoading()
+            webView.destroy()
+        }
+        super.onDestroy()
+    }
+
+    companion object {
+        private const val TAG = "TAMK"
+        private const val ACTION_REFRESH_ASSET = "tamk.ACTION_REFRESH_ASSET"
+        private const val ACTION_REFRESH_ALL = "tamk.ACTION_REFRESH_ALL"
+        private const val EXTRA_ASSET_PATH = "asset_path"
+    }
+}

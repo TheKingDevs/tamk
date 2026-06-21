@@ -2,7 +2,58 @@
  * Project: {{NAME}}
  * Version: {{VERSION}}
  * Author: {{AUTHOR}}
+ * Package: {{PACKAGE}}
  */
 fun main() {
-    println("Olá do Console T.A.M.K!")
+    println("=== {{NAME}} v{{VERSION}} ===")
+    println("Author: {{AUTHOR}}")
+    println()
+
+    // Test math library
+    val calculator = Calculator()
+    println("Calculator Tests:")
+    println("  2 + 3 = ${calculator.add(2, 3)}")
+    println("  10 - 4 = ${calculator.subtract(10, 4)}")
+    println("  6 * 7 = ${calculator.multiply(6, 7)}")
+    println("  15 / 3 = ${calculator.divide(15.0, 3.0)}")
+    println()
+
+    // Test string utilities
+    println("String Tests:")
+    println("  reverse(\"hello\") = ${StringUtils.reverse("hello")}")
+    println("  capitalize(\"world\") = ${StringUtils.capitalize("world")}")
+    println("  isPalindrome(\"racecar\") = ${StringUtils.isPalindrome("racecar")}")
+    println()
+
+    println("All tests passed!")
+}
+
+/**
+ * Simple calculator for basic arithmetic operations
+ */
+class Calculator {
+    fun add(a: Int, b: Int): Int = a + b
+    fun subtract(a: Int, b: Int): Int = a - b
+    fun multiply(a: Int, b: Int): Int = a * b
+    fun divide(a: Double, b: Double): Double {
+        if (b == 0.0) throw ArithmeticException("Division by zero")
+        return a / b
+    }
+}
+
+/**
+ * String utility functions
+ */
+object StringUtils {
+    fun reverse(s: String): String = s.reversed()
+
+    fun capitalize(s: String): String {
+        if (s.isEmpty()) return s
+        return s[0].uppercaseChar() + s.substring(1).lowercase()
+    }
+
+    fun isPalindrome(s: String): Boolean {
+        val cleaned = s.lowercase().filter { it.isLetterOrDigit() }
+        return cleaned == cleaned.reversed()
+    }
 }

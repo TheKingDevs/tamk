@@ -1,7 +1,7 @@
 /**
- * T.A.M.K WebApp - Estilos Globais
- * Projeto: {{NAME}}
- * Versão: {{VERSION}}
+ * T.A.M.K WebApp - Global Styles
+ * Project: {{NAME}}
+ * Version: {{VERSION}}
  */
 
 :root {
@@ -15,22 +15,17 @@
   --code-bg: #1e1e24;
 }
 
-* {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 body {
   background-color: var(--bg-main);
   color: var(--text-main);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   margin: 0;
-  height: 100vh;
+  min-height: 100vh;
   overflow-x: hidden;
   background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
-/* --- LAYOUT UTILS --- */
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -44,7 +39,6 @@ body {
   padding: 2rem;
 }
 
-/* --- TYPOGRAPHY & ANIMATION --- */
 .hero-title {
   font-size: 3rem;
   font-weight: 700;
@@ -52,10 +46,10 @@ body {
   background: linear-gradient(to right, #fff, #94a3b8);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 1rem;
 }
 
-/* Animação de entrada */
 .fade-in-up {
   animation: fadeInUp 0.8s ease-out forwards;
   opacity: 0;
@@ -73,7 +67,6 @@ body {
   }
 }
 
-/* --- UI CARDS --- */
 .info-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -83,6 +76,7 @@ body {
   position: relative;
   overflow: hidden;
   text-align: left;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 
 .info-card:hover {
@@ -106,7 +100,6 @@ body {
   margin-bottom: 0;
 }
 
-/* --- CODE SNIPPET STYLING --- */
 .code-snippet {
   background: var(--code-bg);
   border: 1px solid var(--border-color);
