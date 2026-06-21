@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	Version = "2026.3.0-HMR"
+	Version = "1.0.0"
 	Commit  = "unknown"
 	Date    = ""
 )
@@ -49,6 +49,12 @@ func New() *Config {
 	}
 	cfg.detectEnvironment()
 	cfg.resolvePaths()
+
+	// Override keystore path from environment if set
+	if ks := os.Getenv("TAMK_KEYSTORE"); ks != "" {
+		cfg.Keystore = ks
+	}
+
 	return cfg
 }
 
