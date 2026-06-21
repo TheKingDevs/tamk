@@ -12,6 +12,7 @@ import (
 	"github.com/TheKingDevs/tamk/internal/config"
 	repoRemote "github.com/TheKingDevs/tamk/internal/repository"
 	repoFS "github.com/TheKingDevs/tamk/internal/repository/filesystem"
+	"github.com/TheKingDevs/tamk/internal/tools"
 	"github.com/TheKingDevs/tamk/internal/usecase"
 	"github.com/TheKingDevs/tamk/pkg/errors"
 	"github.com/TheKingDevs/tamk/pkg/logger"
@@ -28,6 +29,10 @@ func NewRootCmd() *cobra.Command {
 	tmplRepo := repoFS.NewTemplateRepository(cfg)
 	buildRepo := repoFS.NewBuildRepository()
 	updateRepo := repoRemote.NewUpdateRepository()
+	toolMgr := tools.New(tools.Config{
+		DevDir:  cfg.DevDir,
+		SDKPath: cfg.SDKPath,
+	})
 
 	createUC := usecase.NewCreateProjectUseCase(cfg, projRepo, tmplRepo)
 	buildUC := usecase.NewBuildProjectUseCase(cfg, buildRepo, projRepo)
@@ -54,7 +59,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.AddCommand(newBuildCmd(buildUC, projRepo))
 	cmd.AddCommand(newDevCmd(devUC, projRepo, cfg))
 	cmd.AddCommand(newSetupCmd(setupUC))
-	cmd.AddCommand(newRunCmd())
+	cmd.AddCommand(newRunCmd(toolMgr))
 	cmd.AddCommand(newInstallCmd(projRepo))
 	cmd.AddCommand(newUpdateCmd(updateUC))
 	cmd.AddCommand(newVersionCmd())
@@ -139,13 +144,30 @@ func newSetupCmd(uc *usecase.SetupEnvironmentUseCase) *cobra.Command {
 	}
 }
 
-func newRunCmd() *cobra.Command {
+func newRunCmd(tools tools.ToolManager) *cobra.Command {
+	runUC := usecase.NewRunUseCase(tools)
 	return &cobra.Command{
 		Use:   "run [file]",
 		Short: "Execute Kotlin/Java snippet",
+		Long:  `Compile and run a Kotlin or Java file. If no file is specified, looks for Main.kt in src/`,
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logger.Info("Run command (not yet fully migrated)")
+			cwd, _ := os.Getwd()
+			fileName := ""
+			if len(args) > 0 {
+				fileName = args[0]
+			}
+
+			result, err := runUC.Execute(context.Background(), usecase.RunInput{
+				ProjectPath: cwd,
+				FileName:    fileName,
+			})
+			if err != nil {
+				return err
+			}
+			if result.ExitCode != 0 {
+				return fmt.Errorf("process exited with code %d", result.ExitCode)
+			}
 			return nil
 		},
 	}

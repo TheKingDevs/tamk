@@ -109,13 +109,13 @@ func (r *TemplateRepository) GetMappings(ctx context.Context, projectType string
 
 func (r *TemplateRepository) getWebAppMappings(internal bool) []entity.TemplateMapping {
 	mappings := []entity.TemplateMapping{
-		{Dest: "AndroidManifest.xml", Template: "AndroidManifest.xml.tmpl"},
-		{Dest: "res/values/strings.xml", Template: "strings.xml.tmpl"},
-		{Dest: "res/values/styles.xml", Template: "styles.xml.tmpl"},
-		{Dest: "res/drawable/ic_launcher.xml", Template: "icon.xml.tmpl"},
-		{Dest: "res/drawable/ic_launcher_round.xml", Template: "icon.xml.tmpl"},
-		{Dest: "res/xml/network_security_config.xml", Template: "network_security_config.xml.tmpl"},
-		{Dest: "src/main/kotlin/", Template: "MainActivity.kt.tmpl"},
+		{Dest: "AndroidManifest.xml", Template: "xml/AndroidManifest.xml.tmpl"},
+		{Dest: "res/values/strings.xml", Template: "xml/strings.xml.tmpl"},
+		{Dest: "res/values/styles.xml", Template: "xml/styles.xml.tmpl"},
+		{Dest: "res/drawable/ic_launcher.xml", Template: "xml/icon.xml.tmpl"},
+		{Dest: "res/drawable/ic_launcher_round.xml", Template: "xml/icon.xml.tmpl"},
+		{Dest: "res/xml/network_security_config.xml", Template: "xml/network_security_config.xml.tmpl"},
+		{Dest: "src/main/kotlin/", Template: "kotlin/MainActivity.kt.tmpl"},
 		{Dest: ".gitignore", Template: "gitignore_root.tmpl"},
 	}
 	if internal {
@@ -131,13 +131,13 @@ func (r *TemplateRepository) getWebAppMappings(internal bool) []entity.TemplateM
 
 func (r *TemplateRepository) getUIAPKMappings() []entity.TemplateMapping {
 	return []entity.TemplateMapping{
-		{Dest: "AndroidManifest.xml", Template: "AndroidManifest.xml.tmpl"},
-		{Dest: "res/layout/activity_main.xml", Template: "activity_main.xml.tmpl"},
-		{Dest: "res/values/strings.xml", Template: "strings.xml.tmpl"},
-		{Dest: "res/values/styles.xml", Template: "styles.xml.tmpl"},
-		{Dest: "res/mipmap/ic_launcher.xml", Template: "icon.xml.tmpl"},
-		{Dest: "res/mipmap/ic_launcher_round.xml", Template: "icon.xml.tmpl"},
-		{Dest: "src/main/kotlin/", Template: "MainActivity.kt.tmpl"},
+		{Dest: "AndroidManifest.xml", Template: "xml/AndroidManifest.xml.tmpl"},
+		{Dest: "res/layout/activity_main.xml", Template: "xml/activity_main.xml.tmpl"},
+		{Dest: "res/values/strings.xml", Template: "xml/strings.xml.tmpl"},
+		{Dest: "res/values/styles.xml", Template: "xml/styles.xml.tmpl"},
+		{Dest: "res/mipmap/ic_launcher.xml", Template: "xml/icon.xml.tmpl"},
+		{Dest: "res/mipmap/ic_launcher_round.xml", Template: "xml/icon.xml.tmpl"},
+		{Dest: "src/main/kotlin/", Template: "kotlin/MainActivity.kt.tmpl"},
 	}
 }
 

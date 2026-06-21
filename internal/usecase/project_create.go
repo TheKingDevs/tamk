@@ -79,6 +79,11 @@ func (uc *CreateProjectUseCase) Execute(ctx context.Context, input CreateProject
 			return nil, fmt.Errorf("failed to create UI APK: %w", err)
 		}
 	case entity.ProjectTypeConsole:
+		// Console projects don't have web-related fields
+		project.WebURL = ""
+		project.WebMode = ""
+		project.MinSDK = 0
+		project.TargetSDK = 0
 		if err := uc.createConsoleStructure(ctx, project, projectPath, input); err != nil {
 			return nil, fmt.Errorf("failed to create console app: %w", err)
 		}
@@ -154,11 +159,6 @@ func (uc *CreateProjectUseCase) createWebAppStructure(ctx context.Context, proje
 		if err := uc.tmplRepo.WriteTemplate(ctx, projectPath, dest, content); err != nil {
 			return fmt.Errorf("failed to write %s: %w", dest, err)
 		}
-	}
-
-	developmentDirs := []string{"development/sdk", "development/secret"}
-	for _, d := range developmentDirs {
-		os.MkdirAll(config.SecurePath(projectPath, d), 0o755)
 	}
 
 	return nil
