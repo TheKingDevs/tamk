@@ -1,8 +1,8 @@
 #!/bin/bash
 # =============================================================================
-# T.A.M.K - Termux APK Manager Kit • Installer
+# T.A.M.K - Termux APK Manager Kit • macOS Installer
 # Version: 1.0.0
-# Supports: Termux (Android)
+# Supports: macOS (Intel & Apple Silicon)
 # =============================================================================
 
 set -euo pipefail
@@ -10,7 +10,6 @@ set -euo pipefail
 VERSION="1.0.0"
 INSTALL_DIR="${TAMK_HOME:-$HOME/.tamk}"
 BIN_DIR="$INSTALL_DIR/bin"
-TOOLS_DIR="$INSTALL_DIR/tools/linux"
 
 # Colors
 RED='\033[0;31m'
@@ -21,28 +20,35 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 BOLD='\033[1m'
 
-log()      { echo -e "${BLUE}==>${NC} $1"; }
-ok()       { echo -e "${GREEN}  ✓${NC} $1"; }
-warn()     { echo -e "${YELLOW}  ⚠${NC} $1"; }
-err()      { echo -e "${RED}  ✗${NC} $1"; }
+log()  { echo -e "${BLUE}==>${NC} $1"; }
+ok()   { echo -e "${GREEN}  ✓${NC} $1"; }
+warn() { echo -e "${YELLOW}  ⚠${NC} $1"; }
+err()  { echo -e "${RED}  ✗${NC} $1"; }
 
 # =============================================================================
 # CHECKS
 # =============================================================================
 
-check_termux() {
-    if [[ ! -d "/data/data/com.termux" ]] && [[ "${PREFIX:-}" != *"/com.termux"* ]]; then
-        err "This script is for Termux only"
-        echo "  Use install-linux.sh for other Linux distros"
+check_macos() {
+    if [[ "$(uname)" != "Darwin" ]]; then
+        err "This script is for macOS only"
         exit 1
     fi
-    ok "Termux detected"
+    ok "macOS detected ($(uname -m))"
+}
+
+check_homebrew() {
+    if ! command -v brew &>/dev/null; then
+        warn "Homebrew not found. Installing..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+    ok "Homebrew found"
 }
 
 check_go() {
     if ! command -v go &>/dev/null; then
-        warn "Go not found. Installing..."
-        pkg install -y golang
+        warn "Go not found. Installing via Homebrew..."
+        brew install go
     fi
     local ver
     ver=$(go version | grep -oP 'go\K[0-9]+\.[0-9]+')
@@ -51,8 +57,12 @@ check_go() {
 
 check_java() {
     if ! command -v java &>/dev/null; then
-        warn "Java not found. Installing OpenJDK 21..."
-        pkg install -y openjdk-21
+        warn "Java not found. Installing OpenJDK 21 via Homebrew..."
+        brew install openjdk@21
+        # Symlink for macOS
+        if [[ -d "/opt/homebrew/opt/openjdk@21" ]]; then
+            sudo ln -sfn /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-21.jdk
+        fi
     fi
     ok "Java found"
 }
@@ -98,10 +108,10 @@ install_binary() {
 
 setup_path() {
     local shell_rc=""
-    if [[ -f "$HOME/.bashrc" ]]; then
-        shell_rc="$HOME/.bashrc"
-    elif [[ -f "$HOME/.zshrc" ]]; then
+    if [[ -f "$HOME/.zshrc" ]]; then
         shell_rc="$HOME/.zshrc"
+    elif [[ -f "$HOME/.bashrc" ]]; then
+        shell_rc="$HOME/.bashrc"
     fi
     
     if [[ -n "$shell_rc" ]]; then
@@ -125,11 +135,12 @@ main() {
     echo ""
     echo -e "${BLUE}╔══════════════════════════════════════╗${NC}"
     echo -e "${BLUE}║${NC}      ${BOLD}T.A.M.K Installer v${VERSION}${NC}       ${BLUE}║${NC}"
-    echo -e "${BLUE}║${NC}   Termux APK Manager Kit            ${BLUE}║${NC}"
+    echo -e "${BLUE}║${NC}   macOS (Intel & Apple Silicon)      ${BLUE}║${NC}"
     echo -e "${BLUE}╚══════════════════════════════════════╝${NC}"
     echo ""
     
-    check_termux
+    check_macos
+    check_homebrew
     check_go
     check_java
     echo ""

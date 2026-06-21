@@ -1,8 +1,8 @@
 #!/bin/bash
 # =============================================================================
-# T.A.M.K - Termux APK Manager Kit • Installer
+# T.A.M.K - Termux APK Manager Kit • Linux Installer
 # Version: 1.0.0
-# Supports: Termux (Android)
+# Supports: Debian, Ubuntu, and derivatives
 # =============================================================================
 
 set -euo pipefail
@@ -10,7 +10,6 @@ set -euo pipefail
 VERSION="1.0.0"
 INSTALL_DIR="${TAMK_HOME:-$HOME/.tamk}"
 BIN_DIR="$INSTALL_DIR/bin"
-TOOLS_DIR="$INSTALL_DIR/tools/linux"
 
 # Colors
 RED='\033[0;31m'
@@ -21,28 +20,54 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 BOLD='\033[1m'
 
-log()      { echo -e "${BLUE}==>${NC} $1"; }
-ok()       { echo -e "${GREEN}  ✓${NC} $1"; }
-warn()     { echo -e "${YELLOW}  ⚠${NC} $1"; }
-err()      { echo -e "${RED}  ✗${NC} $1"; }
+log()  { echo -e "${BLUE}==>${NC} $1"; }
+ok()   { echo -e "${GREEN}  ✓${NC} $1"; }
+warn() { echo -e "${YELLOW}  ⚠${NC} $1"; }
+err()  { echo -e "${RED}  ✗${NC} $1"; }
+
+# =============================================================================
+# DETECTION
+# =============================================================================
+
+detect_distro() {
+    if [[ -f /etc/os-release ]]; then
+        . /etc/os-release
+        DISTRO="$ID"
+        DISTRO_LIKE="${ID_LIKE:-}"
+    else
+        err "Cannot detect Linux distribution"
+        exit 1
+    fi
+    
+    if [[ "$DISTRO" == "debian" ]] || [[ "$DISTRO" == "ubuntu" ]] || [[ "$DISTRO_LIKE" == *"debian"* ]]; then
+        PKG_MGR="apt"
+        PKG_INSTALL="sudo apt-get install -y"
+    elif [[ "$DISTRO" == "arch" ]] || [[ "$DISTRO" == "manjaro" ]] || [[ "$DISTRO_LIKE" == *"arch"* ]]; then
+        PKG_MGR="pacman"
+        PKG_INSTALL="sudo pacman -S --noconfirm"
+    elif [[ "$DISTRO" == "fedora" ]] || [[ "$DISTRO" == "rhel" ]] || [[ "$DISTRO_LIKE" == *"fedora"* ]]; then
+        PKG_MGR="dnf"
+        PKG_INSTALL="sudo dnf install -y"
+    elif [[ "$DISTRO" == "alpine" ]]; then
+        PKG_MGR="apk"
+        PKG_INSTALL="sudo apk add"
+    else
+        warn "Unknown distro ($DISTRO), trying apt..."
+        PKG_MGR="apt"
+        PKG_INSTALL="sudo apt-get install -y"
+    fi
+    
+    ok "Detected: $DISTRO ($PKG_MGR)"
+}
 
 # =============================================================================
 # CHECKS
 # =============================================================================
 
-check_termux() {
-    if [[ ! -d "/data/data/com.termux" ]] && [[ "${PREFIX:-}" != *"/com.termux"* ]]; then
-        err "This script is for Termux only"
-        echo "  Use install-linux.sh for other Linux distros"
-        exit 1
-    fi
-    ok "Termux detected"
-}
-
 check_go() {
     if ! command -v go &>/dev/null; then
         warn "Go not found. Installing..."
-        pkg install -y golang
+        $PKG_INSTALL golang
     fi
     local ver
     ver=$(go version | grep -oP 'go\K[0-9]+\.[0-9]+')
@@ -52,7 +77,12 @@ check_go() {
 check_java() {
     if ! command -v java &>/dev/null; then
         warn "Java not found. Installing OpenJDK 21..."
-        pkg install -y openjdk-21
+        case "$PKG_MGR" in
+            apt)    $PKG_INSTALL openjdk-21-jdk ;;
+            pacman) $PKG_INSTALL jdk21-openjdk ;;
+            dnf)    $PKG_INSTALL java-21-openjdk-devel ;;
+            apk)    $PKG_INSTALL openjdk21 ;;
+        esac
     fi
     ok "Java found"
 }
@@ -125,11 +155,11 @@ main() {
     echo ""
     echo -e "${BLUE}╔══════════════════════════════════════╗${NC}"
     echo -e "${BLUE}║${NC}      ${BOLD}T.A.M.K Installer v${VERSION}${NC}       ${BLUE}║${NC}"
-    echo -e "${BLUE}║${NC}   Termux APK Manager Kit            ${BLUE}║${NC}"
+    echo -e "${BLUE}║${NC}   Linux (Debian/Ubuntu)              ${BLUE}║${NC}"
     echo -e "${BLUE}╚══════════════════════════════════════╝${NC}"
     echo ""
     
-    check_termux
+    detect_distro
     check_go
     check_java
     echo ""
