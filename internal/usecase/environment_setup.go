@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/TheKingDevs/tamk/internal/config"
+	"github.com/TheKingDevs/tamk/internal/tools"
 	"github.com/TheKingDevs/tamk/pkg/logger"
 )
 
@@ -32,6 +33,19 @@ func (uc *SetupEnvironmentUseCase) Execute(ctx context.Context) error {
 		return fmt.Errorf("failed to create directories: %w", err)
 	}
 
+	// Extract embedded tools
+	logger.Step("Extracting embedded tools...")
+	toolMgr := tools.New(tools.Config{
+		DevDir:  uc.cfg.DevDir,
+		SDKPath: uc.cfg.SDKPath,
+	})
+	logger.Info("Tools dir", "path", toolMgr.ToolsDir())
+	if err := toolMgr.Setup(); err != nil {
+		logger.Warn("Failed to extract embedded tools", "error", err)
+	} else {
+		logger.Success("Embedded tools extracted", "dir", toolMgr.ToolsDir())
+	}
+
 	if err := uc.downloadSDK(ctx); err != nil {
 		return fmt.Errorf("failed to download SDK: %w", err)
 	}
@@ -43,6 +57,7 @@ func (uc *SetupEnvironmentUseCase) Execute(ctx context.Context) error {
 	logger.Success("Environment setup complete")
 	logger.Info("SDK path", "path", uc.cfg.SDKPath)
 	logger.Info("Keystore path", "path", uc.cfg.Keystore)
+	logger.Info("Tools dir", "path", toolMgr.ToolsDir())
 
 	return nil
 }

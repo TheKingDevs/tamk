@@ -5,24 +5,57 @@ package tools
 import (
 	"context"
 	"fmt"
-	"os/exec"
+	"os"
 	"path/filepath"
+
+	"github.com/TheKingDevs/tamk/internal/config"
 )
 
-// systemToolManager uses system-installed tools.
-// This is the default for Linux, macOS, and Termux.
+// systemToolManager uses system-installed tools with embedded fallback.
 type systemToolManager struct {
-	cfg     Config
-	cache   *cachedTool
-	sdkPath string
+	cfg      Config
+	cache    *cachedTool
+	toolsDir string
 }
 
 func newSystemManager(cfg Config) *systemToolManager {
 	return &systemToolManager{
-		cfg:     cfg,
-		cache:   newCachedTool(),
-		sdkPath: cfg.SDKPath,
+		cfg:      cfg,
+		cache:    newCachedTool(),
+		toolsDir: cfg.ToolsDir,
 	}
+}
+
+func (m *systemToolManager) Setup() error {
+	if m.IsSetup() {
+		return nil
+	}
+
+	if err := os.MkdirAll(m.toolsDir, 0o755); err != nil {
+		return fmt.Errorf("create tools dir: %w", err)
+	}
+
+	// Extract android.jar
+	jarPath := filepath.Join(m.toolsDir, "android.jar")
+	if err := os.WriteFile(jarPath, androidJar, 0o644); err != nil {
+		return fmt.Errorf("extract android.jar: %w", err)
+	}
+
+	// Write version marker
+	if err := writeVersion(m.toolsDir, config.Version); err != nil {
+		return fmt.Errorf("write version: %w", err)
+	}
+
+	return nil
+}
+
+func (m *systemToolManager) IsSetup() bool {
+	ver := readVersion(m.toolsDir)
+	return ver == config.Version
+}
+
+func (m *systemToolManager) ToolsDir() string {
+	return m.toolsDir
 }
 
 func (m *systemToolManager) AAPT2(_ context.Context) (string, error) {
@@ -44,15 +77,12 @@ func (m *systemToolManager) ApkSigner(_ context.Context) (string, error) {
 		return p, nil
 	}
 
-	// apksigner may be a script or binary
 	p, err := findTool("apksigner")
 	if err != nil {
-		// Try apksigner.jar
 		jar, jarErr := findTool("apksigner.jar")
 		if jarErr != nil {
 			return "", fmt.Errorf("apksigner not found: install Android SDK build-tools: %w", err)
 		}
-		// Wrap jar with java
 		java, javaErr := findTool("java")
 		if javaErr != nil {
 			return "", fmt.Errorf("apksigner.jar found but java not available: %w", javaErr)
@@ -83,7 +113,6 @@ func (m *systemToolManager) D8(_ context.Context) (string, error) {
 		return p, nil
 	}
 
-	// Try d8 binary first, then d8.jar
 	p, err := findTool("d8")
 	if err != nil {
 		jar, jarErr := findTool("d8.jar")
@@ -116,23 +145,34 @@ func (m *systemToolManager) KotlinCompiler(_ context.Context) (string, error) {
 }
 
 func (m *systemToolManager) SDKJar() (string, error) {
-	if m.sdkPath == "" {
-		return "", fmt.Errorf("SDK path not configured")
-	}
-
-	if _, err := exec.LookPath("stat"); err == nil {
-		if out, err := exec.Command("stat", "-f", "%z", m.sdkPath).Output(); err == nil && len(out) > 0 {
-			return m.sdkPath, nil
+	// Check configured SDK path first
+	if m.cfg.SDKPath != "" {
+		if _, err := os.Stat(m.cfg.SDKPath); err == nil {
+			return m.cfg.SDKPath, nil
 		}
 	}
 
-	if info, err := filepath.Glob(m.sdkPath); err == nil && len(info) > 0 {
-		return m.sdkPath, nil
+	// Use extracted android.jar
+	if m.IsSetup() {
+		jarPath := filepath.Join(m.toolsDir, "android.jar")
+		if _, err := os.Stat(jarPath); err == nil {
+			return jarPath, nil
+		}
 	}
 
-	return m.sdkPath, nil
+	// Extract if not setup
+	if err := m.Setup(); err != nil {
+		return "", err
+	}
+
+	jarPath := filepath.Join(m.toolsDir, "android.jar")
+	if _, err := os.Stat(jarPath); err != nil {
+		return "", fmt.Errorf("android.jar not found after setup")
+	}
+
+	return jarPath, nil
 }
 
 func (m *systemToolManager) Cleanup() error {
-	return nil
+	return os.RemoveAll(m.toolsDir)
 }

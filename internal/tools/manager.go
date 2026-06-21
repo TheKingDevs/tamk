@@ -1,7 +1,8 @@
 // Package tools provides a platform-agnostic tool manager for build dependencies.
-// It implements a "Lazy Extraction" pattern:
-// - Unix-like systems: Use system-installed tools (lightweight)
-// - Windows: Auto-extract embedded tools on first use (zero config)
+// It implements a "Setup Once, Run Forever" pattern:
+// - First run: Extract embedded tools to persistent directory
+// - Subsequent runs: Use extracted tools directly (instant)
+// - Version tracking: Re-extract only when TAMK version changes
 package tools
 
 import (
@@ -11,11 +12,20 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
+
+	"github.com/TheKingDevs/tamk/internal/config"
 )
 
 // ToolManager resolves paths to build tools (aapt2, kotlinc, d8, etc.).
 type ToolManager interface {
+	// Setup extracts tools to persistent directory if needed.
+	Setup() error
+
+	// IsSetup returns true if tools are already extracted and valid.
+	IsSetup() bool
+
 	// AAPT2 returns path to the aapt2 binary.
 	AAPT2(ctx context.Context) (string, error)
 
@@ -34,7 +44,10 @@ type ToolManager interface {
 	// SDKJar returns path to android.jar.
 	SDKJar() (string, error)
 
-	// Cleanup removes extracted temporary files.
+	// ToolsDir returns the path to the extracted tools directory.
+	ToolsDir() string
+
+	// Cleanup removes extracted files (for reinstall).
 	Cleanup() error
 }
 
@@ -46,18 +59,23 @@ type Config struct {
 	// SDKPath is the path to android.jar.
 	SDKPath string
 
+	// ToolsDir is the persistent directory for extracted tools.
+	// Defaults to $TAMK_HOME/tools/{os}
+	ToolsDir string
+
 	// UseEmbedded forces use of embedded tools even if system tools exist.
 	UseEmbedded bool
-
-	// CacheDir is the directory for caching extracted tools.
-	// Defaults to os.TempDir()/tamk-tools.
-	CacheDir string
 }
 
 // New creates a new ToolManager for the current platform.
 func New(cfg Config) ToolManager {
-	if cfg.CacheDir == "" {
-		cfg.CacheDir = filepath.Join(os.TempDir(), "tamk-tools")
+	if cfg.ToolsDir == "" {
+		home := config.HomeDir()
+		tamkHome := os.Getenv("TAMK_HOME")
+		if tamkHome == "" {
+			tamkHome = filepath.Join(home, ".tamk")
+		}
+		cfg.ToolsDir = filepath.Join(tamkHome, "tools", runtime.GOOS)
 	}
 
 	if runtime.GOOS == "windows" || cfg.UseEmbedded {
@@ -67,7 +85,6 @@ func New(cfg Config) ToolManager {
 }
 
 // NewForced creates a ToolManager that always uses embedded tools.
-// Useful for testing or when system tools are incompatible.
 func NewForced(cfg Config) ToolManager {
 	cfg.UseEmbedded = true
 	return newEmbeddedManager(cfg)
@@ -75,12 +92,10 @@ func NewForced(cfg Config) ToolManager {
 
 // findTool searches for a tool in PATH and common locations.
 func findTool(name string) (string, error) {
-	// Check PATH first
 	if path, err := exec.LookPath(name); err == nil {
 		return path, nil
 	}
 
-	// Check common locations
 	home, _ := os.UserHomeDir()
 	candidates := []string{
 		filepath.Join(home, ".local", "bin", name),
@@ -88,7 +103,6 @@ func findTool(name string) (string, error) {
 		filepath.Join("/opt", "tamk", "bin", name),
 	}
 
-	// Termux paths
 	if runtime.GOOS == "android" {
 		prefix := os.Getenv("PREFIX")
 		if prefix == "" {
@@ -107,6 +121,37 @@ func findTool(name string) (string, error) {
 	}
 
 	return "", fmt.Errorf("%s not found in PATH or common locations", name)
+}
+
+// versionMarker returns the path to the version marker file.
+func versionMarker(toolsDir string) string {
+	return filepath.Join(toolsDir, ".version")
+}
+
+// readVersion reads the version from the marker file.
+func readVersion(toolsDir string) string {
+	data, err := os.ReadFile(versionMarker(toolsDir))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
+// writeVersion writes the version to the marker file.
+func writeVersion(toolsDir, version string) error {
+	return os.WriteFile(versionMarker(toolsDir), []byte(version), 0o644)
+}
+
+// setExecutable sets the executable permission on a file.
+func setExecutable(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if info.Mode()&0o111 != 0 {
+		return nil
+	}
+	return os.Chmod(path, info.Mode()|0o111)
 }
 
 // cachedTool provides thread-safe caching for resolved tool paths.

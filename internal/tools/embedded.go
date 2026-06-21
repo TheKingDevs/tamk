@@ -12,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/TheKingDevs/tamk/internal/config"
 )
 
 //go:embed binaries/windows/aapt2.exe
@@ -33,62 +35,89 @@ var kotlinZip []byte
 type embeddedToolManager struct {
 	cfg        Config
 	cache      *cachedTool
+	toolsDir   string
 	extractDir string
 	mu         sync.Once
 }
 
 func newEmbeddedManager(cfg Config) *embeddedToolManager {
 	return &embeddedToolManager{
-		cfg:   cfg,
-		cache: newCachedTool(),
+		cfg:      cfg,
+		cache:    newCachedTool(),
+		toolsDir: cfg.ToolsDir,
 	}
 }
 
-func (m *embeddedToolManager) ensureExtracted() error {
-	var firstErr error
-	m.mu.Do(func() {
-		dir := filepath.Join(m.cfg.CacheDir, "extracted")
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			firstErr = fmt.Errorf("create cache dir: %w", err)
-			return
-		}
-		m.extractDir = dir
-	})
-	return firstErr
+func (m *embeddedToolManager) Setup() error {
+	if m.IsSetup() {
+		return nil
+	}
+
+	if err := os.MkdirAll(m.toolsDir, 0o755); err != nil {
+		return fmt.Errorf("create tools dir: %w", err)
+	}
+
+	// Extract aapt2.exe
+	aapt2Path := filepath.Join(m.toolsDir, "aapt2.exe")
+	if err := os.WriteFile(aapt2Path, aapt2Binary, 0o755); err != nil {
+		return fmt.Errorf("extract aapt2: %w", err)
+	}
+
+	// Extract apksigner.jar
+	apksignerPath := filepath.Join(m.toolsDir, "apksigner.jar")
+	if err := os.WriteFile(apksignerPath, apksignerJar, 0o644); err != nil {
+		return fmt.Errorf("extract apksigner: %w", err)
+	}
+
+	// Extract zipalign.exe
+	zipalignPath := filepath.Join(m.toolsDir, "zipalign.exe")
+	if err := os.WriteFile(zipalignPath, zipalignBinary, 0o755); err != nil {
+		return fmt.Errorf("extract zipalign: %w", err)
+	}
+
+	// Extract d8.jar
+	d8Path := filepath.Join(m.toolsDir, "d8.jar")
+	if err := os.WriteFile(d8Path, d8Jar, 0o644); err != nil {
+		return fmt.Errorf("extract d8: %w", err)
+	}
+
+	// Extract kotlinc.zip
+	if err := m.extractZip(kotlinZip, "kotlinc"); err != nil {
+		return fmt.Errorf("extract kotlinc: %w", err)
+	}
+
+	// Extract android.jar
+	jarPath := filepath.Join(m.toolsDir, "android.jar")
+	if err := os.WriteFile(jarPath, androidJar, 0o644); err != nil {
+		return fmt.Errorf("extract android.jar: %w", err)
+	}
+
+	// Write version marker
+	if err := writeVersion(m.toolsDir, config.Version); err != nil {
+		return fmt.Errorf("write version: %w", err)
+	}
+
+	return nil
 }
 
-func (m *embeddedToolManager) extractFile(data []byte, name string) (string, error) {
-	if err := m.ensureExtracted(); err != nil {
-		return "", err
-	}
-
-	path := filepath.Join(m.extractDir, name)
-
-	// Check if already extracted
-	if info, err := os.Stat(path); err == nil && info.Size() == int64(len(data)) {
-		return path, nil
-	}
-
-	if err := os.WriteFile(path, data, 0o755); err != nil {
-		return "", fmt.Errorf("extract %s: %w", name, err)
-	}
-
-	return path, nil
+func (m *embeddedToolManager) IsSetup() bool {
+	ver := readVersion(m.toolsDir)
+	return ver == config.Version
 }
 
-func (m *embeddedToolManager) extractZip(data []byte, targetDir string) (string, error) {
-	if err := m.ensureExtracted(); err != nil {
-		return "", err
-	}
+func (m *embeddedToolManager) ToolsDir() string {
+	return m.toolsDir
+}
 
-	dir := filepath.Join(m.extractDir, targetDir)
+func (m *embeddedToolManager) extractZip(data []byte, targetDir string) error {
+	dir := filepath.Join(m.toolsDir, targetDir)
 	if info, err := os.Stat(dir); err == nil && info.IsDir() {
-		return dir, nil
+		return nil
 	}
 
 	zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
-		return "", fmt.Errorf("open zip: %w", err)
+		return fmt.Errorf("open zip: %w", err)
 	}
 
 	for _, f := range zipReader.File {
@@ -98,26 +127,26 @@ func (m *embeddedToolManager) extractZip(data []byte, targetDir string) (string,
 			continue
 		}
 		if err := os.MkdirAll(filepath.Dir(fpath), 0o755); err != nil {
-			return "", err
+			return err
 		}
 		outFile, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, f.Mode())
 		if err != nil {
-			return "", err
+			return err
 		}
 		rc, err := f.Open()
 		if err != nil {
 			outFile.Close()
-			return "", err
+			return err
 		}
 		_, err = io.Copy(outFile, rc)
 		rc.Close()
 		outFile.Close()
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
 
-	return dir, nil
+	return nil
 }
 
 func (m *embeddedToolManager) AAPT2(_ context.Context) (string, error) {
@@ -125,9 +154,15 @@ func (m *embeddedToolManager) AAPT2(_ context.Context) (string, error) {
 		return p, nil
 	}
 
-	p, err := m.extractFile(aapt2Binary, "aapt2.exe")
-	if err != nil {
-		return "", fmt.Errorf("extract aapt2: %w", err)
+	if !m.IsSetup() {
+		if err := m.Setup(); err != nil {
+			return "", err
+		}
+	}
+
+	p := filepath.Join(m.toolsDir, "aapt2.exe")
+	if _, err := os.Stat(p); err != nil {
+		return "", fmt.Errorf("aapt2 not found: %w", err)
 	}
 
 	m.cache.Set("aapt2", p)
@@ -139,12 +174,17 @@ func (m *embeddedToolManager) ApkSigner(_ context.Context) (string, error) {
 		return p, nil
 	}
 
-	jarPath, err := m.extractFile(apksignerJar, "apksigner.jar")
-	if err != nil {
-		return "", fmt.Errorf("extract apksigner: %w", err)
+	if !m.IsSetup() {
+		if err := m.Setup(); err != nil {
+			return "", err
+		}
 	}
 
-	// On Windows, we need to find java
+	jarPath := filepath.Join(m.toolsDir, "apksigner.jar")
+	if _, err := os.Stat(jarPath); err != nil {
+		return "", fmt.Errorf("apksigner not found: %w", err)
+	}
+
 	javaPath, err := findTool("java.exe")
 	if err != nil {
 		return "", fmt.Errorf("apksigner requires Java: %w", err)
@@ -160,9 +200,15 @@ func (m *embeddedToolManager) Zipalign(_ context.Context) (string, error) {
 		return p, nil
 	}
 
-	p, err := m.extractFile(zipalignBinary, "zipalign.exe")
-	if err != nil {
-		return "", fmt.Errorf("extract zipalign: %w", err)
+	if !m.IsSetup() {
+		if err := m.Setup(); err != nil {
+			return "", err
+		}
+	}
+
+	p := filepath.Join(m.toolsDir, "zipalign.exe")
+	if _, err := os.Stat(p); err != nil {
+		return "", fmt.Errorf("zipalign not found: %w", err)
 	}
 
 	m.cache.Set("zipalign", p)
@@ -174,9 +220,15 @@ func (m *embeddedToolManager) D8(_ context.Context) (string, error) {
 		return p, nil
 	}
 
-	jarPath, err := m.extractFile(d8Jar, "d8.jar")
-	if err != nil {
-		return "", fmt.Errorf("extract d8: %w", err)
+	if !m.IsSetup() {
+		if err := m.Setup(); err != nil {
+			return "", err
+		}
+	}
+
+	jarPath := filepath.Join(m.toolsDir, "d8.jar")
+	if _, err := os.Stat(jarPath); err != nil {
+		return "", fmt.Errorf("d8 not found: %w", err)
 	}
 
 	javaPath, err := findTool("java.exe")
@@ -194,15 +246,15 @@ func (m *embeddedToolManager) KotlinCompiler(_ context.Context) (string, error) 
 		return p, nil
 	}
 
-	kotlinDir, err := m.extractZip(kotlinZip, "kotlinc")
-	if err != nil {
-		return "", fmt.Errorf("extract kotlinc: %w", err)
+	if !m.IsSetup() {
+		if err := m.Setup(); err != nil {
+			return "", err
+		}
 	}
 
-	// Find kotlinc.bat or kotlinc.exe
 	candidates := []string{
-		filepath.Join(kotlinDir, "bin", "kotlinc.bat"),
-		filepath.Join(kotlinDir, "bin", "kotlinc.exe"),
+		filepath.Join(m.toolsDir, "kotlinc", "bin", "kotlinc.bat"),
+		filepath.Join(m.toolsDir, "kotlinc", "bin", "kotlinc.exe"),
 	}
 
 	for _, c := range candidates {
@@ -212,19 +264,38 @@ func (m *embeddedToolManager) KotlinCompiler(_ context.Context) (string, error) 
 		}
 	}
 
-	return "", fmt.Errorf("kotlinc not found in extracted archive")
+	return "", fmt.Errorf("kotlinc not found")
 }
 
 func (m *embeddedToolManager) SDKJar() (string, error) {
-	if m.cfg.SDKPath == "" {
-		return "", fmt.Errorf("SDK path not configured")
+	// Check configured SDK path first
+	if m.cfg.SDKPath != "" {
+		if _, err := os.Stat(m.cfg.SDKPath); err == nil {
+			return m.cfg.SDKPath, nil
+		}
 	}
-	return m.cfg.SDKPath, nil
+
+	// Use extracted android.jar
+	if m.IsSetup() {
+		jarPath := filepath.Join(m.toolsDir, "android.jar")
+		if _, err := os.Stat(jarPath); err == nil {
+			return jarPath, nil
+		}
+	}
+
+	// Extract if not setup
+	if err := m.Setup(); err != nil {
+		return "", err
+	}
+
+	jarPath := filepath.Join(m.toolsDir, "android.jar")
+	if _, err := os.Stat(jarPath); err != nil {
+		return "", fmt.Errorf("android.jar not found after setup")
+	}
+
+	return jarPath, nil
 }
 
 func (m *embeddedToolManager) Cleanup() error {
-	if m.extractDir != "" {
-		return os.RemoveAll(m.extractDir)
-	}
-	return nil
+	return os.RemoveAll(m.toolsDir)
 }
