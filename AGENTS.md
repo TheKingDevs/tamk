@@ -756,18 +756,19 @@ RASPSecurityModule.start(context, 5000L) { threat ->
 ## AGENT BEST PRACTICES
 
 1. **Always read** `./AGENTS.md` first for context.
-2. **Check existing docs** in `documentation/` before creating new files.
-3. **Preserve template structure** when modifying `.tmpl` files.
-4. **Test changes** with `go test ./...` and `make build`.
-5. **Update CHANGELOG.md** for new features or fixes.
-6. **Respect user settings** in `settings.local.json`.
-7. **Never expose credentials** (Keystore passwords, paths).
-8. **Understand HMR system** — Review `HMR_SYSTEM.md` for WebApp dev workflows.
-9. **Incremental builds** — `AssetsOnlyBuild()` is key for HMR; do not break it.
-10. **File Watcher** depends on `fsnotify` library — ensure import fallback.
-11. **Async cleanup** — Dev server has complex goroutine lifecycle; preserve proper shutdown.
-12. **Version updates** — Update `config.Version` constant in `internal/config/config.go` for new releases.
-13. **Build cache** — APK existence is verified (`os.Stat`) alongside hash comparison; do not remove this check.
+2. **Always read** `.agents/memory/MEMORY.md` for project memory before starting work.
+3. **Check existing docs** in `documentation/` before creating new files.
+4. **Preserve template structure** when modifying `.tmpl` files.
+5. **Test changes** with `go test ./...` and `make build`.
+6. **Update CHANGELOG.md** for new features or fixes.
+7. **Respect user settings** in `settings.local.json`.
+8. **Never expose credentials** (Keystore passwords, paths).
+9. **Understand HMR system** — Review `HMR_SYSTEM.md` for WebApp dev workflows.
+10. **Incremental builds** — `AssetsOnlyBuild()` is key for HMR; do not break it.
+11. **File Watcher** depends on `fsnotify` library — ensure import fallback.
+12. **Async cleanup** — Dev server has complex goroutine lifecycle; preserve proper shutdown.
+13. **Version updates** — Update `config.Version` constant in `internal/config/config.go` for new releases.
+14. **Build cache** — APK existence is verified (`os.Stat`) alongside hash comparison; do not remove this check.
 
 ---
 

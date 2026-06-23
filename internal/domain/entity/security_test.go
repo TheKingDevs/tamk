@@ -6,14 +6,14 @@ import (
 
 func TestSecurityConfigForLevel(t *testing.T) {
 	tests := []struct {
-		name           string
-		level          SecurityLevel
-		wantEnabled    bool
-		wantAntiDebug  bool
-		wantAntiRoot   bool
-		wantAntiFrida  bool
-		wantIntegrity  bool
-		wantRASP       bool
+		name          string
+		level         SecurityLevel
+		wantEnabled   bool
+		wantAntiDebug bool
+		wantAntiRoot  bool
+		wantAntiFrida bool
+		wantIntegrity bool
+		wantRASP      bool
 	}{
 		{
 			name:          "none",

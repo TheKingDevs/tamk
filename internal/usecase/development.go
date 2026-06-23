@@ -3,6 +3,8 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,6 +25,7 @@ type DevModeUseCase struct {
 	buildUC  *BuildProjectUseCase
 	projRepo repository.ProjectRepository
 	watcher  *watcher.Watcher
+	hmr      *HMRServer
 
 	password      string
 	projectPath   string
@@ -81,6 +84,26 @@ func (uc *DevModeUseCase) Start(ctx context.Context, projectPath, password strin
 		return fmt.Errorf("failed to start file watcher: %w", err)
 	}
 
+	uc.hmr = NewHMRServer(uc.assetsDir)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", uc.hmr.HandleWebSocket)
+	listener, err := net.Listen("tcp", ":8765")
+	if err != nil {
+		logger.Warn("HMR WebSocket server failed to start", "error", err)
+	} else {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Error("HMR server panicked", "recover", r)
+				}
+			}()
+			if err := http.Serve(listener, mux); err != nil && err != http.ErrServerClosed {
+				logger.Debug("HMR server stopped", "error", err)
+			}
+		}()
+		logger.Success("HMR server started", "port", 8765)
+	}
+
 	logger.Success("Dev mode started")
 	logger.Info("Watching for changes", "dir", uc.assetsDir)
 	logger.Info("Press Ctrl+C to stop")
@@ -99,9 +122,15 @@ func (uc *DevModeUseCase) Stop(ctx context.Context) {
 func (uc *DevModeUseCase) onFileChanged(path string) {
 	ext := strings.ToLower(filepath.Ext(path))
 
+	if uc.hmr != nil && uc.hmr.ClientCount() > 0 {
+		uc.hmr.OnFileChanged(path)
+		logger.Info(fmt.Sprintf("%s changed, HMR push sent", ext), "file", path, "clients", uc.hmr.ClientCount())
+		return
+	}
+
 	switch ext {
 	case ".css", ".js":
-		logger.Info(fmt.Sprintf("%s changed, HMR update", ext), "file", path)
+		logger.Info(fmt.Sprintf("%s changed (no HMR clients, connect browser)", ext), "file", path)
 	default:
 		logger.Info("File changed, triggering rebuild", "file", path)
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -237,10 +266,15 @@ func (uc *DevModeUseCase) GetStatus() map[string]any {
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
 
-	return map[string]any{
+	status := map[string]any{
 		"project":  uc.projectPath,
 		"watching": uc.assetsDir,
 		"watcher":  uc.watcher != nil && uc.watcher.IsRunning(),
 		"bridge":   uc.devBridgeInjected,
 	}
+	if uc.hmr != nil {
+		status["hmr_clients"] = uc.hmr.ClientCount()
+		status["hmr_port"] = 8765
+	}
+	return status
 }

@@ -28,6 +28,7 @@ type shellState struct {
 	devUC    *usecase.DevModeUseCase
 	setupUC  *usecase.SetupEnvironmentUseCase
 	updateUC *usecase.UpdateUseCase
+	runUC    *usecase.RunUseCase
 	projRepo *repoFS.ProjectRepository
 }
 
@@ -38,6 +39,7 @@ func newShellCmd(
 	devUC *usecase.DevModeUseCase,
 	setupUC *usecase.SetupEnvironmentUseCase,
 	updateUC *usecase.UpdateUseCase,
+	runUC *usecase.RunUseCase,
 	projRepo *repoFS.ProjectRepository,
 ) *cobra.Command {
 	return &cobra.Command{
@@ -53,6 +55,7 @@ func newShellCmd(
 				devUC:    devUC,
 				setupUC:  setupUC,
 				updateUC: updateUC,
+				runUC:    runUC,
 				projRepo: projRepo,
 			}
 			return s.run()
@@ -305,9 +308,21 @@ func (s *shellState) doUpdate() error {
 
 func (s *shellState) doRun(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: run <code>")
+		return fmt.Errorf("usage: run <filename>")
 	}
-	fmt.Printf("\033[90mRun: executing %q... (stub)\033[0m\n", strings.Join(args, " "))
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	result, err := s.runUC.Execute(ctx, usecase.RunInput{
+		ProjectPath: s.cwd,
+		FileName:    args[0],
+	})
+	if err != nil {
+		return err
+	}
+	if result.ExitCode != 0 {
+		return fmt.Errorf("process exited with code %d", result.ExitCode)
+	}
 	return nil
 }
 

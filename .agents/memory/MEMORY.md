@@ -13,6 +13,7 @@ _Maintained by MiMoCode agent. Updated after significant changes._
 - **2026-06-20**: Implemented ToolManager Lazy Extraction ecosystem. Updated project_build.go to use ToolManager.
 - **2026-06-21**: Implemented "Setup Once, Run Forever" architecture. Added `tamk run` for native Kotlin execution. Reorganized templates into xml/kotlin/css/js subdirectories. Created platform-specific installers. Reset version to 1.0.0. Updated PRD/workflow.md.
 - **2026-06-21**: Implemented "Setup Once, Run Forever" architecture. Reset version to 1.0.0. Created platform-specific installers. Implemented `tamk run` command. Fixed console project config.
+- **2026-06-23**: Implemented HMR WebSocket server (gorilla/websocket on :8765). Fixed shell doRun() stub. Added tests for zip.go, errors.go, apk_finder.go. Wired update auto-install (git/go).
 
 ## Applied Clean Code Fixes (2026-06-20)
 - `development.go`: Removed misleading unimplemented command log, extracted `findAPK()` helper
@@ -127,5 +128,21 @@ _Maintained by MiMoCode agent. Updated after significant changes._
 - **Location**: Tests live next to code (`internal/usecase/*_test.go`)
 - **Removed**: Empty `tests/` directory (was leftover from old fixtures)
 - **Added**: `project_build_test.go` with tests for `apkFilename()`, `validateKeystorePassword()`, `failedResult()`
-- **Coverage**: 12.7% → 15.4% (usecase layer)
+- **Added (2026-06-23)**: `apk_finder_test.go` (7 tests), `zip_test.go` (4 tests), `errors_test.go` (4 test groups), `hmr_server_test.go` (8 tests), `update_install_test.go` (3 tests)
+- **Coverage**: 11.2% → 19.0% (usecase layer), `pkg/errors`: 0% → 100%
 - **Pattern**: Table-driven tests following Go conventions
+
+## HMR WebSocket Server (2026-06-23)
+- **File**: `internal/usecase/hmr_server.go`
+- **Library**: `gorilla/websocket v1.5.3`
+- **Port**: `:8765`
+- **Integration**: `DevModeUseCase` creates and starts HMR server on `Start()`
+- **Message types**: `reload`, `css-update`, `js-update`, `html-update` (triggers reload)
+- **Flow**: File change → `onFileChanged()` → `hmr.OnFileChanged()` → broadcast to connected clients
+- **Fallback**: When no HMR clients connected, falls back to full assets rebuild
+
+## Update Auto-Install (2026-06-23)
+- **Methods**: `git pull --rebase --autostash` (if `.git` in TAMK_HOME) or `go install @latest`
+- **Detection**: `detectUpdateMethod()` checks for `.git` dir or `go` binary
+- **CLI behavior**: CRITICAL/PATCH → auto-install, MAJOR/MINOR → prompt user
+- **Shell fix**: `doRun()` now calls `RunUseCase.Execute()` instead of printing "(stub)"

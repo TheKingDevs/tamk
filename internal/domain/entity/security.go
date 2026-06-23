@@ -12,8 +12,8 @@ const (
 
 // SecurityConfig holds all security settings for a project.
 type SecurityConfig struct {
-	Enabled  bool          `json:"enabled"`
-	Level    SecurityLevel `json:"level"`
+	Enabled  bool           `json:"enabled"`
+	Level    SecurityLevel  `json:"level"`
 	Guardian GuardianConfig `json:"guardian"`
 }
 

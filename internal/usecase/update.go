@@ -3,6 +3,10 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/TheKingDevs/tamk/internal/config"
 	"github.com/TheKingDevs/tamk/internal/domain/entity"
@@ -67,4 +71,61 @@ func formatReleaseNotes(notes string) string {
 		return notes[:500] + "..."
 	}
 	return notes
+}
+
+func (uc *UpdateUseCase) Install(ctx context.Context, info *entity.UpdateInfo) error {
+	if info == nil {
+		return fmt.Errorf("no update info provided")
+	}
+
+	logger.Step("Installing update", "from", info.CurrentVersion, "to", info.LatestVersion)
+
+	method := uc.detectUpdateMethod()
+
+	switch method {
+	case "git":
+		return uc.installViaGit(ctx)
+	case "go":
+		return uc.installViaGoInstall(ctx)
+	default:
+		logger.Warn("No update method available. Install manually.",
+			"download", info.DownloadURL)
+		return nil
+	}
+}
+
+func (uc *UpdateUseCase) detectUpdateMethod() string {
+	tamkHome := uc.cfg.TAMKHome
+	gitDir := filepath.Join(tamkHome, ".git")
+	if _, err := os.Stat(gitDir); err == nil {
+		return "git"
+	}
+
+	if _, err := exec.LookPath("go"); err == nil {
+		return "go"
+	}
+
+	return ""
+}
+
+func (uc *UpdateUseCase) installViaGit(ctx context.Context) error {
+	tamkHome := uc.cfg.TAMKHome
+	cmd := exec.CommandContext(ctx, "git", "pull", "--rebase", "--autostash")
+	cmd.Dir = tamkHome
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git pull failed: %s: %w", string(out), err)
+	}
+	logger.Success("Updated via git", "output", strings.TrimSpace(string(out)))
+	return nil
+}
+
+func (uc *UpdateUseCase) installViaGoInstall(ctx context.Context) error {
+	cmd := exec.CommandContext(ctx, "go", "install", "github.com/TheKingDevs/tamk/cmd/tamk@latest")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("go install failed: %s: %w", string(out), err)
+	}
+	logger.Success("Updated via go install")
+	return nil
 }

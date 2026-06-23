@@ -4,11 +4,60 @@ All notable changes. Format based on [Keep a Changelog](https://keepachangelog.c
 
 ---
 
-## [1.1.0] - 2026-06-21
+## [1.0.0] - 2026-06-23
 
 ### ✨ Added
 
-- **Guardian Security System**: Multi-layered APK protection
+- **Clean Architecture v4**: Full migration from Python to Go
+  - Domain entities + value objects + repository interfaces
+  - Use cases: CreateProject, BuildProject, DevMode, Setup, Install, Update, Run
+  - CLI with Cobra + interactive wizard + REPL shell
+  - Dependency injection via constructor wiring in `root.go`
+- **Project Creation**: `tamk create` wizard
+  - WebApp (WebView + HTML/CSS/JS) — internal (assets) or external (URL)
+  - UI APK Nativo (XML + Kotlin)
+  - Console Kotlin CLI — boilerplate with Calculator and StringUtils
+  - Validation: name, author, SEMVER version, Android package name
+  - Per-project keystore RSA 2048 (`secret/project.keystore`)
+  - 18 `.tmpl` templates organized in `xml/`, `kotlin/`, `css/`, `js/`
+- **APK Build Pipeline**: `tamk build -p SENHA`
+  - Full pipeline via ToolManager: AAPT2 → kotlinc → D8 → zipalign → apksigner
+  - Incremental assets build (`AssetsOnlyBuild()`) for dev mode
+  - SHA-256 build cache (skip if nothing changed)
+  - Keystore password validation before build (`keytool -list`)
+  - Timeout: 10min full build, 5min incremental
+- **Development Mode (HMR)**: `tamk dev`
+  - File watcher (fsnotify) with 500ms debounce
+  - Bridge JS inline injected into `index.html`
+  - **WebSocket server on port 8765** for real-time hot reload
+  - Messages: `reload`, `css-update`, `js-update`
+  - Fallback to full assets rebuild when no HMR clients connected
+  - ADB push for HTML/CSS/JS + broadcast `ACTION_REFRESH`
+  - Backup and restore of `index.html`
+- **Code Execution**: `tamk run [file]`
+  - Compiles and executes Kotlin/Java files natively
+  - Auto-detection of `Main.kt` in `src/`
+  - Automatic main class resolution
+  - Uses ToolManager for tool paths
+- **Environment Setup**: `tamk setup`
+  - Tool extraction to `~/.tamk/tools/{os}/` ("Setup Once, Run Forever")
+  - SDK download (android.jar platform-30)
+  - Debug keystore generation
+  - Version marker (`.version`) for re-extraction only on TAMK update
+- **APK Installation**: `tamk install [port]`
+  - Built-in HTTP server + QR code in terminal
+  - ADB side-load support
+- **Automatic Update System**: `tamk update`
+  - GitHub API release checker (6h cache)
+  - 5 priority levels: CRITICAL, MAJOR, MINOR, PATCH, OPTIONAL
+  - **Auto-install via `git pull --rebase --autostash`** (if `.git` in TAMK_HOME)
+  - **Auto-install via `go install @latest`** (fallback)
+  - CRITICAL/PATCH: auto-install silently
+  - MAJOR/MINOR: prompt user before install
+- **Interactive Shell**: `tamk shell`
+  - Commands: `create`, `build`, `dev`, `setup`, `install`, `update`, `run`, `version`
+  - `cd`, `pwd`, `history`, `help`
+- **Guardian Security System**: `tamk build --guardian`
   - Anti-Debug: 5 detection methods (API, TracerPid, Timing, Props, JDWP)
   - Anti-Root: 4 layers (Files, /data/data, Apps, Magisk)
   - Anti-Frida: 5 methods (Process, Maps, Ports, TCP, Files)
@@ -16,51 +65,12 @@ All notable changes. Format based on [Keep a Changelog](https://keepachangelog.c
   - Asset Encryption: AES-256-GCM with magic header `TAMK_ENC_1`
   - RASP: Periodic runtime checks with threat callbacks
   - Security levels: none, basic, standard, maximum
-  - `--guardian` CLI flag for build command
-  - SecurityConfig entity with JSON persistence
-- **Asset Encryptor**: AES-256-GCM encryption for project assets
-  - Key derivation from password via SHA-256
-  - Random salt and IV generation
-  - Magic header `TAMK_ENC_1` for identification
-- **Security Templates**: Kotlin security classes
-  - `GuardianBridge.kt.tmpl`: Main security module
-  - `RASPSecurityModule.kt.tmpl`: Runtime protection
-
-### 🔧 Changed
-
-- Build pipeline: Added security template injection step
-- Project entity: Added `Security` field with `SecurityConfig`
-- Project repository: Security config persistence in `tamk.config`
-- CLI: Added `--guardian` global flag
-
-### 📚 Documentation
-
-- Added `GUARDIAN_SECURITY.md`: Complete security documentation
-- Updated `AGENTS.md`: Added Guardian Security section
-
----
-
-## [1.0.0] - 2026-06-18
-
-### ✨ Added
-
-- **Development Mode (HMR)**: `tamk dev` with complete Hot Module Replacement
-  - CSS hot reload without state loss
-  - JavaScript HMR with module injection and state preservation
-  - JSON real-time data update
-  - WebSocket server (port 8765) + HTTP fallback (port 8080)
-  - File watcher (fsnotify) with 500ms debounce
-  - Incremental asset build (`AssetsOnlyBuild()`)
-  - ADB auto-install + asset push + broadcast refresh
-  - HMR server with module registry and client state tracking
-  - Bridge JS `tamk-dev-bridge.js` automatically injected
-  - Backup and restore of `index.html`
-- **Automatic Update System**:
-  - `Checker` with 6h cache and GitHub API
-  - 5 priority levels: CRITICAL, MAJOR, MINOR, PATCH, OPTIONAL
-  - Auto-updater with backup, 3 methods (git/go install/script)
-- **Remote URL WebApp**: Support for loading external URLs in WebView
-- **Java Support**: Run controller now executes `.java` besides `.kt`
+- **ToolManager**: Multi-platform tool management
+  - Linux/macOS/Android: system tools (lightweight)
+  - Windows: embedded tools via `go:embed` (zero config)
+- **8 GitHub Actions workflows**: CI, build, release, tags, security, maintenance, Windows test, T2T audit
+- **Platform-specific installers**: Termux, Linux (5 distros), macOS, Windows
+- **13 test files**: usecase, entity, valueobject, errors packages
 
 ### 🔧 Changed
 
@@ -74,133 +84,20 @@ All notable changes. Format based on [Keep a Changelog](https://keepachangelog.c
   - Binary: PyInstaller bundle → native Go binary at `bin/tamk`
   - Template engine: string replacements → `internal/repository/filesystem/template_repository.go`
   - Update checker: standalone Python → `internal/usecase/update.go` + `internal/repository/update_repository.go`
-- **Dev mode**: `onFileChanged()`, `AssetsOnlyBuild()`, status command, 500ms debounce
-- **HMR server**: Client-side WebSocket bridge (server-side pending)
-- **Build pipeline**: `FullBuild()`, `AssetsOnlyBuild()` incremental, `PushAssetToDevice()` via ADB
-- **Template system**: `TemplateRepository` loading + placeholder rendering
-- **Config**: Environment detection in `internal/config/config.go`, `GetTemplateDir()` multi-path fallback
-- **Dependency injection**: All use cases wired in `root.go` with constructor injection
+- Shell `run` command: Now calls `RunUseCase.Execute()` (was stub)
+- Stack: Added `gorilla/websocket` dependency
 
 ### 📚 Documentation
 
-- AGENTS.md completely rewritten (Go + Clean Architecture, 16 sections, Mermaid diagrams)
-- ARCHITECTURE.md updated with Clean Architecture layer diagrams
-- API_COMPONENTS.md updated with Go package reference
-- QUICKSTART.md updated for Go binary usage
-- STRUCTURE.md updated with Go project tree
-- README.md restructured with technology table and architecture sections
-- HMR_SYSTEM.md, HMR_GUIDE.md, HMR_EXAMPLES.md (new)
-- UPDATE_SYSTEM.md (new)
-- BANNER_UTILS.md (new)
-- CLAUDE.md, GEMINI.md updated
-- MIGRATION_PLAN.md (internal migration tracking)
-
----
-
-## [2.3.2] - 2026-03-29
-
-### 🔧 Fixed
-
-- Installation path: path resolution corrected, environment variables updated
-
----
-
-## [2.3.1] - 2026-03-29
-
-### 🎨 Added
-
-- Visual identity: project logo integration
-
-### 🔧 Fixed
-
-- Banner system: rendering and update, toilet adjusted
-
----
-
-## [2.3.0] - 2026-03-29
-
-### ✨ Added
-
-- HMR - Hot Module Replacement (initial version)
-  - CSS Hot Reload, JavaScript HMR, JSON HMR
-  - State Preservation
-  - DevServer with module registry
-
-### 🔧 Changed
-
-- DevController: `_on_file_changed()` with per-type HMR
-- `_quick_assets_build()` with reload notification
-- `dev_bridge.js.tmpl` updated for 1.0.0
-
----
-
-## [2.2.0] - 2026-02-27
-
-### ✨ Added
-
-- Hosted WebApps: remote URL support in WebView
-
----
-
-## [2.1.2] - 2026-01-21
-
-### 📌 Updated
-
-- Contributor credits in README
-
----
-
-## [2.1.1] - 2026-01-21
-
-### 🔧 Fixed
-
-- Console projects: structure and `Main.kt` template
-
----
-
-## [2.1.0] - 2026-01-20
-
-### ✨ Added
-
-- Modernized CLI with improved UX
-- Input system with `tput`, layout with `toilet`
-
----
-
-## [2.0.1] - 2026-01-20
-
-### 📝 Fixed
-
-- README: title formatting
-
----
-
-## [2.0.0] - 2026-01-20
-
-### ✨ Added
-
-- **WebApp Support**: WebView + HTML/CSS/JS in APK
-- WebAppStructure, webapp templates
-- Complete documentation (ARCHITECTURE, API_COMPONENTS, DEV_GUIDE, etc.)
-
-### 🔧 Changed
-
-- BuildController: `-A` flag for assets
-- ProjectFactory: webapp mapping
-- README with WebApp flow
-
----
-
-## [1.0.0] - 2026-01-20
-
-### ✨ Added
-
-- Initial release
-- UI APK (native XML) and Console (Kotlin CLI)
-- Build pipeline (aapt2, kotlinc, d8, apksigner, zipalign)
-- `.tmpl` template system
-- `setup-install.sh` installer
-- Per-project private keystore
+- AGENTS.md: Go + Clean Architecture, 16 sections, Mermaid diagrams
+- ARCHITECTURE.md: Clean Architecture layer diagrams
+- API_COMPONENTS.md: Go package reference
+- QUICKSTART.md, STRUCTURE.md, README.md updated
+- HMR_SYSTEM.md, HMR_GUIDE.md, HMR_EXAMPLES.md
+- UPDATE_SYSTEM.md, BANNER_UTILS.md
+- GUARDIAN_SECURITY.md: Complete security documentation
+- CONTRIBUTING.md, FAQ.md, CHANGELOG.md
+- 21 docs + VERSIONING.txt total
 
 ---
 

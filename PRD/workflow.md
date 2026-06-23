@@ -32,9 +32,12 @@ T.A.M.K (Termux APK Manager Kit) v1.0.0 — framework para desenvolvimento Andro
 ### 4. Modo Dev (HMR)
 - File watcher (fsnotify) em `src/main/assets/`
 - Bridge JS inline injetada no index.html
+- **WebSocket server em `:8765`** para push de atualizações em tempo real
+- **Mensagens HMR**: `reload`, `css-update`, `js-update` via WebSocket
 - Assets build rápido via `AssetsOnlyBuild()`
 - ADB push para HTML/CSS/JS + broadcast `ACTION_REFRESH`
 - Extensões: `.html`, `.css`, `.js`, `.json`, `.png`, `.jpg`, `.jpeg`, `.svg`, `.webp`, `.xml`, `.kt`
+- **Fallback**: Sem clientes HMR conectados → rebuild completo dos assets
 
 ### 5. Setup de Ambiente (`tamk setup`)
 - Extração de ferramentas embutidas para `~/.tamk/tools/{os}/`
@@ -49,9 +52,13 @@ T.A.M.K (Termux APK Manager Kit) v1.0.0 — framework para desenvolvimento Andro
 ### 7. Sistema de Atualização (`tamk update`)
 - GitHub API release checker (cache 6h)
 - Prioridades: CRITICAL/PATCH (auto-install), MAJOR/MINOR (prompt), OPTIONAL (notify)
+- **Auto-install via `git pull --rebase --autostash`** (se `.git` em TAMK_HOME)
+- **Auto-install via `go install @latest`** (fallback)
+- Detecção automática do método de atualização
 
 ### 8. Shell Interativo (`tamk shell`)
-- Comandos: `create`, `build`, `dev`, `setup`, `install`, `update`, `version`
+- Comandos: `create`, `build`, `dev`, `setup`, `install`, `update`, `run`, `version`
+- **`run <arquivo>` agora executa Kotlin/Java via RunUseCase** (não mais stub)
 
 ---
 
@@ -137,6 +144,7 @@ Sistema de gerenciamento de ferramentas com suporte multiplataforma:
 - **CLI**: Cobra
 - **Logger**: slog + ANSI colors
 - **File Watcher**: fsnotify
+- **WebSocket**: gorilla/websocket (HMR server)
 - **Embed**: go:embed (ferramentas Windows + android.jar)
 - **Testes**: testing padrão
 
@@ -155,6 +163,7 @@ Sistema de gerenciamento de ferramentas com suporte multiplataforma:
 - File watcher (fsnotify)
 - Assets incremental build
 - HMR bridge inline JS
+- **WebSocket server (:8765) para push de atualizações**
 - ADB push + broadcast
 
 ### ✅ Fase 3 — Plataforma & CI/CD
@@ -166,10 +175,13 @@ Sistema de gerenciamento de ferramentas com suporte multiplataforma:
 - Security scanning (govulncheck, staticcheck, golangci-lint)
 
 ### 🔄 Fase 4 — Qualidade (Em andamento)
-- Cobertura de testes ≥ 70%
+- Cobertura de testes ≥ 70% (atual: 13.8% usecase, 100% errors, 85.7% entity, 97.1% valueobject)
 - Benchmarks + regression guard
 - Docker multi-stage build
 - Documentação completa (23 docs + AGENTS.md)
+- **HMR WebSocket server com gorilla/websocket**
+- **Update auto-install (git/go)**
+- **Shell run command funcional**
 
 ---
 

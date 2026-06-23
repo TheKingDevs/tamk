@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -40,6 +41,7 @@ func NewRootCmd() *cobra.Command {
 	setupUC := usecase.NewSetupEnvironmentUseCase(cfg)
 	devUC := usecase.NewDevModeUseCase(cfg, buildUC, projRepo)
 	updateUC := usecase.NewUpdateUseCase(cfg, updateRepo)
+	runUC := usecase.NewRunUseCase(toolMgr)
 
 	cmd := &cobra.Command{
 		Use:   "tamk",
@@ -65,7 +67,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.AddCommand(newInstallCmd(projRepo))
 	cmd.AddCommand(newUpdateCmd(updateUC))
 	cmd.AddCommand(newVersionCmd())
-	cmd.AddCommand(newShellCmd(cfg, createUC, buildUC, devUC, setupUC, updateUC, projRepo))
+	cmd.AddCommand(newShellCmd(cfg, createUC, buildUC, devUC, setupUC, updateUC, runUC, projRepo))
 
 	return cmd
 }
@@ -224,6 +226,22 @@ func newUpdateCmd(uc *usecase.UpdateUseCase) *cobra.Command {
 				return nil
 			}
 			uc.PrintUpdateInfo(info)
+
+			if uc.ShouldAutoInstall(info) {
+				logger.Info("Auto-installing update...")
+				return uc.Install(context.Background(), info)
+			}
+
+			if uc.ShouldPrompt(info) {
+				fmt.Print("\nInstall update? [y/N] ")
+				var answer string
+				fmt.Scan(&answer)
+				if strings.ToLower(answer) == "y" || strings.ToLower(answer) == "yes" {
+					return uc.Install(context.Background(), info)
+				}
+				logger.Info("Update skipped")
+			}
+
 			return nil
 		},
 	}

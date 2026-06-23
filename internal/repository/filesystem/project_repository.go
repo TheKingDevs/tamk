@@ -17,15 +17,15 @@ func NewProjectRepository() *ProjectRepository {
 }
 
 type projectConfig struct {
-	Type        entity.ProjectType    `json:"type"`
-	Name        string                `json:"name"`
-	Version     string                `json:"version"`
-	Author      string                `json:"author"`
-	PackageName string                `json:"package"`
-	WebURL      string                `json:"web_url,omitempty"`
-	WebMode     string                `json:"web_mode,omitempty"`
-	MinSDK      int                   `json:"min_sdk,omitempty"`
-	TargetSDK   int                   `json:"target_sdk,omitempty"`
+	Type        entity.ProjectType     `json:"type"`
+	Name        string                 `json:"name"`
+	Version     string                 `json:"version"`
+	Author      string                 `json:"author"`
+	PackageName string                 `json:"package"`
+	WebURL      string                 `json:"web_url,omitempty"`
+	WebMode     string                 `json:"web_mode,omitempty"`
+	MinSDK      int                    `json:"min_sdk,omitempty"`
+	TargetSDK   int                    `json:"target_sdk,omitempty"`
 	Security    *entity.SecurityConfig `json:"security,omitempty"`
 }
 
