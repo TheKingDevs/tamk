@@ -302,12 +302,21 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 
 	logger.Step("Compiling Kotlin sources...")
 	os.MkdirAll(objDir, 0o755)
+
+	classpath := sdkPath
+	libMgr := NewLibraryManager(uc.cfg)
+	if libCP, err := libMgr.GetClasspath(); err == nil && libCP != "" {
+		classpath = sdkPath + string(os.PathListSeparator) + libCP
+		logger.Debug("Library classpath added", "classpath", classpath)
+	}
+
 	kotlinCmd := exec.CommandContext(ctx, kotlincPath,
 		kotlinDir, genDir,
-		"-cp", sdkPath,
+		"-cp", classpath,
 		"-d", objDir,
 	)
 	if out, err := uc.executeOutput(kotlinCmd); err != nil {
+		logger.Debug("Kotlin compile output", "output", string(out))
 		return failedResult(entity.BuildPhaseKotlinCompile, string(out))
 	}
 
@@ -333,6 +342,11 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 		return failedResult(entity.BuildPhaseD8, "no .class files found in "+objDir)
 	}
 	args := []string{"--lib", sdkPath, "--release", "--output", projPath}
+	if libCP, err := libMgr.GetClasspath(); err == nil && libCP != "" {
+		for _, jar := range strings.Split(libCP, string(os.PathListSeparator)) {
+			args = append(args, "--lib", jar)
+		}
+	}
 	args = append(args, classFiles...)
 	d8Cmd := exec.CommandContext(ctx, d8Path, args...)
 	if out, err := uc.executeOutput(d8Cmd); err != nil {

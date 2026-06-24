@@ -14,6 +14,7 @@ _Maintained by MiMoCode agent. Updated after significant changes._
 - **2026-06-21**: Implemented "Setup Once, Run Forever" architecture. Added `tamk run` for native Kotlin execution. Reorganized templates into xml/kotlin/css/js subdirectories. Created platform-specific installers. Reset version to 1.0.0. Updated PRD/workflow.md.
 - **2026-06-21**: Implemented "Setup Once, Run Forever" architecture. Reset version to 1.0.0. Created platform-specific installers. Implemented `tamk run` command. Fixed console project config.
 - **2026-06-23**: Implemented HMR WebSocket server (gorilla/websocket on :8765). Fixed shell doRun() stub. Added tests for zip.go, errors.go, apk_finder.go. Wired update auto-install (git/go).
+- **2026-06-23**: Performance optimizations: hash skip ignored dirs, template content cache (sync.Map), config singleton (sync.Once), SDKJar path caching. Updated PRD/performance.md.
 
 ## Applied Clean Code Fixes (2026-06-20)
 - `development.go`: Removed misleading unimplemented command log, extracted `findAPK()` helper
@@ -30,6 +31,7 @@ _Maintained by MiMoCode agent. Updated after significant changes._
 | Build | `build.yml` | Multi-platform matrix build |
 | Security | `security.yml` | govulncheck, staticcheck, golangci-lint |
 | Maintenance | `maintenance.yml` | Weekly dependency updates |
+| Test Windows | `test-windows.yml` | Windows CI on runner |
 
 ## Platform Support
 | Platform | GOOS/GOARCH | Binary Name | Tool Strategy |
@@ -99,12 +101,12 @@ _Maintained by MiMoCode agent. Updated after significant changes._
 - Install path: `$PREFIX/bin/tamk`
 
 ## Key Metrics
-- Entity types: 11 (Project, ProjectType, WebContentMode, BuildResult, BuildPhase, BuildCache, Template, TemplateMapping, Keystore, UpdateInfo, UpdateLevel)
-- Error sentinels: 15 + BuildError struct
+- Entity types: 14 (Project, ProjectType, WebContentMode, BuildResult, BuildPhase, BuildCache, Template, TemplateMapping, Keystore, UpdateInfo, UpdateLevel, SecurityConfig, SecurityLevel, GuardianConfig)
+- Error sentinels: 14 + BuildError struct
 - Watch extensions: .html .css .js .json .png .jpg .jpeg .svg .webp .xml .kt
 - Ignore dirs: .git node_modules secret .idea
-- Template count: 11 webapp + 1 console + 6 ui_apk = 18 total
-- Documentation: 21 .md files + VERSIONING.txt
+- Template count: 11 webapp + 1 console + 6 ui_apk + 5 security = 23 total
+- Documentation: 22 .md files + VERSIONING.txt
 
 ## Architecture Decisions
 - Clean Architecture v4 enforced via `internal/` package boundaries
@@ -117,6 +119,19 @@ _Maintained by MiMoCode agent. Updated after significant changes._
 - Execute `.agents/hooks/work-finished` after completing agent tasks
 - User communicates in Portuguese (PT-BR)
 - Code and comments in English (market standard)
+
+## Anti-Regression Rules (MANDATORY)
+Before marking ANY task as done, agent MUST:
+1. **Rebuild tamk**: `go build -o /root/.tamk/bin/tamk ./cmd/tamk`
+2. **Create + Build ALL 3 project types** in `/root/testes/` using flags:
+   - UIAPK: `tamk create -n RegTestUIAPK -t ui_apk -v 1.0.0 -a Agent`
+   - WebAppLocal: `tamk create -n RegTestWebLocal -t webapp -v 1.0.0 -a Agent --web-mode internal`
+   - WebAppExtern: `tamk create -n RegTestWebExtern -t webapp -v 1.0.0 -a Agent --web-mode external --url https://example.com`
+3. **Build all 3**: `cd /root/testes/RegTest* && tamk build -p test123` — ALL must succeed
+4. **Run Go tests**: `go test ./... -count=1` — ALL must pass
+5. **Run go vet**: `go vet ./...` — 0 warnings
+6. **Clean up**: `rm -rf /root/testes/RegTest*`
+7. **NEVER commit if any check fails**
 
 ## Security Fixes (2026-06-20)
 - **Keystore password validation**: Password now validated via `keytool -list` BEFORE build starts
@@ -137,7 +152,7 @@ _Maintained by MiMoCode agent. Updated after significant changes._
 - **Library**: `gorilla/websocket v1.5.3`
 - **Port**: `:8765`
 - **Integration**: `DevModeUseCase` creates and starts HMR server on `Start()`
-- **Message types**: `reload`, `css-update`, `js-update`, `html-update` (triggers reload)
+- **Message types**: `reload`, `css-update`, `js-update` (HTML changes send `reload`)
 - **Flow**: File change → `onFileChanged()` → `hmr.OnFileChanged()` → broadcast to connected clients
 - **Fallback**: When no HMR clients connected, falls back to full assets rebuild
 

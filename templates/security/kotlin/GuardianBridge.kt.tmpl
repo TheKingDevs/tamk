@@ -297,7 +297,6 @@ object GuardianBridge {
         try {
             val unknownEmuField = Build::class.java.getDeclaredField("QEMU_EMU").apply { isAccessible = true }.get(null) as? String
             if (unknownEmuField != null) return true
-            if (qemuProp != null) return true
         } catch (_: Exception) {}
 
         // Check for emulator-specific CPU features

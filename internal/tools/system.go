@@ -145,9 +145,14 @@ func (m *systemToolManager) KotlinCompiler(_ context.Context) (string, error) {
 }
 
 func (m *systemToolManager) SDKJar() (string, error) {
+	if p, ok := m.cache.Get("sdk_jar"); ok {
+		return p, nil
+	}
+
 	// Check configured SDK path first
 	if m.cfg.SDKPath != "" {
 		if _, err := os.Stat(m.cfg.SDKPath); err == nil {
+			m.cache.Set("sdk_jar", m.cfg.SDKPath)
 			return m.cfg.SDKPath, nil
 		}
 	}
@@ -156,6 +161,7 @@ func (m *systemToolManager) SDKJar() (string, error) {
 	if m.IsSetup() {
 		jarPath := filepath.Join(m.toolsDir, "android.jar")
 		if _, err := os.Stat(jarPath); err == nil {
+			m.cache.Set("sdk_jar", jarPath)
 			return jarPath, nil
 		}
 	}
@@ -170,6 +176,7 @@ func (m *systemToolManager) SDKJar() (string, error) {
 		return "", fmt.Errorf("android.jar not found after setup")
 	}
 
+	m.cache.Set("sdk_jar", jarPath)
 	return jarPath, nil
 }
 

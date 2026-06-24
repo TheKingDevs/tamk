@@ -14,7 +14,19 @@ var (
 	Version = "1.0.0"
 	Commit  = "unknown"
 	Date    = ""
+
+	once     sync.Once
+	instance *Config
 )
+
+// Get returns a singleton Config instance.
+// Use this in CLI entry points where a fresh config is not needed.
+func Get() *Config {
+	once.Do(func() {
+		instance = New()
+	})
+	return instance
+}
 
 type Environment string
 

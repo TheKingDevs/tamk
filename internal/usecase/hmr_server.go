@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gorilla/websocket"
 	"github.com/TheKingDevs/tamk/pkg/logger"
+	"github.com/gorilla/websocket"
 )
 
 type HMRMessage struct {

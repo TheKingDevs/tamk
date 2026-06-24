@@ -237,3 +237,47 @@ func createProjectInteractive(ctx context.Context, uc *usecase.CreateProjectUseC
 
 	return nil
 }
+
+func createProjectFromFlags(ctx context.Context, uc *usecase.CreateProjectUseCase, name, projTypeStr, version, author, webURL, webModeStr string) error {
+	var projType entity.ProjectType
+	switch projTypeStr {
+	case "console":
+		projType = entity.ProjectTypeConsole
+	case "webapp":
+		projType = entity.ProjectTypeWebApp
+	default:
+		projType = entity.ProjectTypeUIAPK
+	}
+
+	var webMode entity.WebContentMode
+	if webModeStr == "external" {
+		webMode = entity.WebContentExternal
+	} else {
+		webMode = entity.WebContentInternal
+	}
+
+	if projType == entity.ProjectTypeWebApp && webMode == entity.WebContentInternal {
+		webURL = "file:///android_asset/index.html"
+	}
+
+	pwd := password
+	if pwd == "" && (projType == entity.ProjectTypeWebApp || projType == entity.ProjectTypeUIAPK) {
+		pwd = "test123"
+	}
+
+	output, err := uc.Execute(ctx, usecase.CreateProjectInput{
+		Name:     name,
+		Type:     projType,
+		Version:  version,
+		Author:   author,
+		Password: pwd,
+		WebURL:   webURL,
+		WebMode:  webMode,
+	})
+	if err != nil {
+		return err
+	}
+
+	showSuccessBanner(name, string(projType), output.ProjectPath, output.Project.PackageName)
+	return nil
+}

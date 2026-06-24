@@ -49,6 +49,17 @@ func (r *BuildRepository) CalculateProjectHash(ctx context.Context, projectPath 
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
+var ignoredDirs = map[string]bool{
+	".git":         true,
+	"node_modules": true,
+	"secret":       true,
+	".idea":        true,
+	"build":        true,
+	".gradle":      true,
+	".tamk-run":    true,
+	"cache":        true,
+}
+
 func (r *BuildRepository) collectSourceFiles(projectPath string) []string {
 	var files []string
 	watchDirs := []string{"src", "res"}
@@ -58,6 +69,9 @@ func (r *BuildRepository) collectSourceFiles(projectPath string) []string {
 		dirPath := filepath.Join(projectPath, dir)
 		filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil || info.IsDir() {
+				if info != nil && info.IsDir() && ignoredDirs[info.Name()] {
+					return filepath.SkipDir
+				}
 				return nil
 			}
 			files = append(files, path)

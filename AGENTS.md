@@ -76,21 +76,27 @@ cmd/tamk/main.go
     ├── build                           # BuildProjectUseCase
     ├── dev                             # DevModeUseCase
     ├── setup                           # SetupEnvironmentUseCase
-    ├── run                             # Run (stub)
+    ├── run                             # RunUseCase
     ├── install                         # InstallUseCase
     ├── update                          # UpdateUseCase
     ├── version                         # Config display
     └── shell                           # Interactive REPL
 ├── internal/usecase/
 │   ├── project_create.go           # Project creation wizard logic
-│   ├── project_build.go            # Full APK build pipeline + incremental
-│   ├── development.go              # HMR dev mode orchestrator
-│   ├── environment_setup.go        # SDK download + keystore generation
-│   ├── install.go                  # APK install with HTTP server + QR code
-│   ├── update.go                   # Update check & apply
+│   ├── project_build.go            # Full + incremental APK build
+│   ├── development.go              # HMR dev mode
+│   ├── environment_setup.go        # SDK setup
+│   ├── install.go                  # HTTP server + QR install
+│   ├── update.go                   # Update logic
+│   ├── library_manager.go          # Library download & management
+│   ├── run.go                      # Native Kotlin execution
+│   ├── hmr_server.go               # WebSocket server for HMR
+│   ├── apk_finder.go               # APK discovery helpers
+│   ├── asset_encryptor.go          # AES-256-GCM asset encryption
+│   ├── proguard_obfuscator.go      # ProGuard integration
 │   └── zip.go                      # Archive helper (zipDir)
 ├── internal/domain/
-│   ├── entity/                        # Project, Build, Template, Keystore, Update
+│   ├── entity/                        # Project, Build, Template, Keystore, Update, Security
 │   ├── valueobject/                   # ProjectName, Version, PackageName
 │   └── repository/                    # Interface contracts (ports)
 ├── internal/config/
@@ -98,6 +104,10 @@ cmd/tamk/main.go
 ├── internal/repository/
 │   ├── filesystem/                    # ProjectRepo, TemplateRepo, BuildRepo
 │   └── update_repository.go           # Remote GitHub API
+├── internal/tools/
+│   ├── manager.go                     # ToolManager interface
+│   ├── system.go                      # System tools (Linux/macOS/Android)
+│   └── embedded.go                    # Embedded tools (Windows)
 ├── configs/
 │   └── config.yaml                   # User-facing config sample
 └── pkg/
@@ -115,7 +125,7 @@ graph TD
     CLI -->|build| BUC[BuildProjectUseCase]
     CLI -->|dev| DUC[DevModeUseCase]
     CLI -->|setup| SUC[SetupEnvironmentUseCase]
-    CLI -->|run| RC[Run (stub)]
+    CLI -->|run| RC[RunUseCase]
     CLI -->|install| IC[InstallUseCase]
     CLI -->|update| UUC[UpdateUseCase]
     CLI -->|version| CFG[Config]
@@ -155,6 +165,12 @@ tamk/
 │   │   ├── environment_setup.go     # SDK setup
 │   │   ├── install.go               # HTTP server + QR install
 │   │   ├── update.go                # Update logic
+│   │   ├── library_manager.go       # Library download & management
+│   │   ├── run.go                   # Native Kotlin execution
+│   │   ├── hmr_server.go            # WebSocket server for HMR
+│   │   ├── apk_finder.go            # APK discovery helpers
+│   │   ├── asset_encryptor.go       # AES-256-GCM asset encryption
+│   │   ├── proguard_obfuscator.go   # ProGuard integration
 │   │   └── zip.go                   # Archive helper (zipDir)
 │   ├── domain/
 │   │   ├── entity/                  # Core domain types
@@ -162,6 +178,7 @@ tamk/
 │   │   │   ├── build.go             # BuildResult, build state
 │   │   │   ├── template.go          # Template definition
 │   │   │   ├── keystore.go          # Keystore metadata
+│   │   │   ├── security.go          # SecurityConfig, SecurityLevel, GuardianConfig
 │   │   │   └── update.go            # VersionInfo, UpdateLevel
 │   │   ├── valueobject/             # Value objects with validation
 │   │   │   ├── project_name.go      # Sanitized project name
@@ -179,30 +196,44 @@ tamk/
 │   │   │   ├── build_repository.go   # Build cache, hash calculation, path sanitization
 │   │   │   └── template_repository.go # Template loading + rendering
 │   │   └── update_repository.go      # GitHub API client
+│   ├── tools/                       # Platform-specific tool resolution
+│   │   ├── manager.go               # ToolManager interface + New() factory
+│   │   ├── system.go                # System tools (Linux/macOS/Android)
+│   │   ├── embedded.go              # Embedded tools (Windows, go:embed)
+│   │   ├── system_stub.go           # Windows stub for system tools
+│   │   ├── embedded_stub.go         # Non-Windows stub for embedded tools
+│   │   └── sdk_embed.go             # go:embed for android.jar
 │   └── config/                       # Internal config (config.go, env detection)
 ├── configs/
-│   └── config.yaml                  # User-facing config sample
+│   ├── config.yaml                  # User-facing config sample
+│   └── proguard-android.pro         # ProGuard configuration
 ├── pkg/                             # Shared utilities
-│   ├── logger/logger.go             # Structured slog logger with ANSI colors
+│   ├── logger/logger.go             # Structured slog-based logger with ANSI colors
 │   ├── errors/errors.go             # Domain error types
-│   ├── watcher/watcher.go           # fsnotify-based FileWatcher
-│   └── qrcode/qrcode.go             # QR code terminal renderer
+│   ├── watcher/watcher.go           # fsnotify-based file watcher
+│   └── qrcode/qrcode.go            # QR code terminal renderer
 ├── templates/                       # .tmpl files per project type
-│   ├── webapp/                      # 11 templates + css/ + js/
+│   ├── webapp/                      # 11 templates (xml/, kotlin/, css/, js/)
 │   ├── console/                     # 1 template
-│   └── ui_apk/                      # 6 templates
+│   ├── ui_apk/                      # 6 templates (xml/, kotlin/)
+│   └── security/kotlin/             # 5 security templates
+├── scripts/                         # Platform-specific installers
+│   ├── install-termux.sh            # Termux installer
+│   ├── install-linux.sh             # Multi-distro Linux installer
+│   ├── install-macos.sh             # macOS installer
+│   ├── install-windows.bat          # Windows installer
+│   ├── test-windows.bat             # Windows test script
+│   └── test-windows.ps1             # Windows PowerShell test
+├── setup-install.sh                 # Auto-detect + redirect installer
 ├── assets/
 │   └── images/logo.png
 ├── PRD/                             # Product requirements docs
-├── documentation/                   # 21 markdown docs + VERSIONING.txt
-├── bin/                             # Compiled binary output
-│   └── tamk                         # Go binary
-├── tests/                           # Test fixture data (DupTest, TestConsole, TestWebApp)
-├── go.mod                           # Go module definition
-├── go.sum                           # Go module checksum
+├── documentation/                   # 22 markdown docs + VERSIONING.txt
 ├── .githooks/                       # Git hooks (pre-commit: fmt, vet, tests, bench)
 ├── .agents/
 │   └── hooks/                       # Agent lifecycle hooks (work-finished)
+├── go.mod                           # Go module definition
+├── go.sum                           # Go module checksum
 ├── Makefile                         # Build, test, lint targets
 ├── Dockerfile                       # Containerized build environment
 └── .golangci.yml                    # Linter configuration
@@ -217,14 +248,47 @@ tamk/
 | Command | Handler Layer | Description |
 | :--- | :--- | :--- |
 | `tamk version` | `newVersionCmd` | Show version + environment info |
-| `tamk create` | `newCreateCmd` | Interactive project creation wizard |
+| `tamk create` | `newCreateCmd` | Create project (wizard or flags) |
 | `tamk build -p SENHA` | `newBuildCmd` | Full APK build (compile + sign + align) |
 | `tamk dev` | `newDevCmd` | HMR development mode with live reload |
-| `tamk run [ARQUIVO]` | `newRunCmd` | Execute Kotlin/Java snippet (stub) |
+| `tamk run [ARQUIVO]` | `newRunCmd` | Execute Kotlin/Java snippet |
 | `tamk install [port]` | `newInstallCmd` | Serve APK download via HTTP + QR code |
 | `tamk setup` | `newSetupCmd` | Download SDK + generate debug keystore |
 | `tamk update` | `newUpdateCmd` | Check and install updates |
 | `tamk shell` | `newShellCmd` | Interactive development REPL |
+| `tamk libs` | `newLibsCmd` | Manage Android libraries |
+
+### Create Flags (Non-Interactive)
+
+| Flag | Description | Example |
+| :--- | :--- | :--- |
+| `-n, --name` | Project name | `-n MeuApp` |
+| `-t, --type` | Project type: `ui_apk`, `webapp`, `console` | `-t webapp` |
+| `-v, --version` | Version (SEMVER) | `-v 1.0.0` |
+| `-a, --author` | Author name | `-a Developer` |
+| `--url` | WebApp URL | `--url https://example.com` |
+| `--web-mode` | Web content mode: `internal`, `external` | `--web-mode external` |
+
+### Libs Commands
+
+| Command | Description |
+| :--- | :--- |
+| `tamk libs list` | List available libraries by category |
+| `tamk libs install <artifact>` | Install library + dependencies |
+| `tamk libs remove <artifact>` | Remove installed library |
+| `tamk libs installed` | List installed libraries |
+| `tamk libs classpath` | Show library classpath |
+
+### Available Libraries
+
+| Category | Libraries |
+| :--- | :--- |
+| **Kotlin** | `kotlin-stdlib` |
+| **KotlinX** | `kotlinx-coroutines-core`, `kotlinx-coroutines-android`, `kotlinx-serialization-core` |
+| **Networking** | `okhttp3`, `okhttp3-logging`, `retrofit2`, `retrofit2-gson` |
+| **JSON** | `gson`, `jackson-databind` |
+| **Logging** | `slf4j-api`, `logback-classic` |
+| **Utils** | `guava`, `apache-commons-lang3` |
 
 ### Global Flags
 
@@ -295,6 +359,7 @@ MyWebApp/
 | **webapp** | `AndroidManifest.xml`, `MainActivity.kt`, `index.html`, `strings.xml`, `styles.xml`, `icon.xml`, `network_security_config.xml`, `css/styles.css`, `js/app.js`, `gitignore_root`, `gitignore_assets` | `{{NAME}}`, `{{PACKAGE}}`, `{{VERSION}}`, `{{AUTHOR}}`, `{{WEB_URL}}`, `{{DEV_MODE}}`, `{{MIN_SDK}}`, `{{TARGET_SDK}}`, `{{TAMK_VERSION}}`, `{{DEV_PORT}}` |
 | **ui_apk** | `AndroidManifest.xml`, `MainActivity.kt`, `activity_main.xml`, `strings.xml`, `styles.xml`, `icon.xml` | `{{NAME}}`, `{{PACKAGE}}`, `{{VERSION}}`, `{{AUTHOR}}` |
 | **console** | `Main.kt` | `{{NAME}}`, `{{VERSION}}`, `{{AUTHOR}}` |
+| **security** | `GuardianBridge.kt`, `RASPSecurityModule.kt`, `CertificatePinner.kt`, `StringObfuscator.kt`, `IntegrityVerifier.kt` | `{{PACKAGE}}` |
 
 ### Template Processing Flow (in `internal/repository/filesystem/template_repository.go`)
 
@@ -455,7 +520,7 @@ delivery/cli/  (wires dependencies, handles CLI input)
 
 | Package | Types | Purpose |
 | :--- | :--- | :--- |
-| `entity/` | `Project`, `ProjectType`, `WebContentMode`, `BuildResult`, `BuildPhase`, `BuildCache`, `Template`, `TemplateMapping`, `Keystore`, `UpdateInfo`, `UpdateLevel` | Core domain types with no external dependencies |
+| `entity/` | `Project`, `ProjectType`, `WebContentMode`, `BuildResult`, `BuildPhase`, `BuildCache`, `Template`, `TemplateMapping`, `Keystore`, `UpdateInfo`, `UpdateLevel`, `SecurityConfig`, `SecurityLevel`, `GuardianConfig` | Core domain types with no external dependencies |
 | `valueobject/` | `ProjectName`, `Version`, `PackageName`, validation errors | Immutable value objects with built-in validation |
 | `repository/` | `ProjectRepository`, `BuildRepository`, `TemplateRepository`, `UpdateRepository` | Interface contracts (Go interfaces) |
 
@@ -463,12 +528,15 @@ delivery/cli/  (wires dependencies, handles CLI input)
 
 | Use Case | Key Methods | Description |
 | :--- | :--- | :--- |
-| `CreateProjectUseCase` | `Execute(input)` | Project creation wizard, template processing |
-| `BuildProjectUseCase` | `FullBuild(input)`, `AssetsOnlyBuild(input)` | APK build pipeline + incremental |
+| `CreateProjectUseCase` | `Execute(ctx, input)` | Project creation wizard, template processing |
+| `BuildProjectUseCase` | `FullBuild(ctx, input)`, `AssetsOnlyBuild(ctx, input)` | APK build pipeline + incremental |
 | `DevModeUseCase` | `Start(ctx, projectPath, password)`, `Stop(ctx)`, `GetStatus()` | HMR dev mode orchestrator |
 | `SetupEnvironmentUseCase` | `Execute()` | SDK download + keystore generation |
 | `InstallUseCase` | `Serve(ctx, projectPath, port)`, `FindAPK(projectPath)`, `FindAPKs(projectPath)` | HTTP server + QR code for APK download |
-| `UpdateUseCase` | `Check(ctx)`, `ShouldAutoInstall(info)`, `ShouldPrompt(info)`, `PrintUpdateInfo(info)` | GitHub release check |
+| `UpdateUseCase` | `Check(ctx)`, `Install(ctx, info)`, `ShouldAutoInstall(info)`, `ShouldPrompt(info)`, `PrintUpdateInfo(info)` | GitHub release check + auto-install |
+| `LibraryManager` | `ListLibraries()`, `InstallLibrary(ctx, artifact)`, `RemoveLibrary(artifact)`, `GetClasspath()`, `GetInstalledLibraries()` | Library management |
+| `RunUseCase` | `Execute(ctx, filePath)` | Native Kotlin execution |
+| `HMRServer` | `Start()`, `Stop()`, `OnFileChanged(path)` | WebSocket server for HMR |
 
 ### Repository Layer (`internal/repository/`)
 
@@ -769,6 +837,79 @@ RASPSecurityModule.start(context, 5000L) { threat ->
 12. **Async cleanup** — Dev server has complex goroutine lifecycle; preserve proper shutdown.
 13. **Version updates** — Update `config.Version` constant in `internal/config/config.go` for new releases.
 14. **Build cache** — APK existence is verified (`os.Stat`) alongside hash comparison; do not remove this check.
+
+---
+
+## ANTI-REGRESSION RULES
+
+### Mandatory Validation Before Any Change
+
+Every agent MUST validate the following before marking a task as done:
+
+#### 1. Build Pipeline Test (REQUIRED)
+```bash
+# Rebuild tamk binary
+cd /root/projects/golang/tamk && go build -o /root/.tamk/bin/tamk ./cmd/tamk
+
+# Create and build ALL 3 project types using flags (non-interactive)
+cd /root/testes
+/root/.tamk/bin/tamk create -n RegTestUIAPK -t ui_apk -v 1.0.0 -a Agent
+/root/.tamk/bin/tamk create -n RegTestWebLocal -t webapp -v 1.0.0 -a Agent --web-mode internal
+/root/.tamk/bin/tamk create -n RegTestWebExtern -t webapp -v 1.0.0 -a Agent --web-mode external --url https://example.com
+
+# Build all 3
+cd /root/testes/RegTestUIAPK && /root/.tamk/bin/tamk build -p test123
+cd /root/testes/RegTestWebLocal && /root/.tamk/bin/tamk build -p test123
+cd /root/testes/RegTestWebExtern && /root/.tamk/bin/tamk build -p test123
+```
+
+**ALL 3 builds MUST succeed. If any fails, the change has a regression.**
+
+#### 2. Go Tests (REQUIRED)
+```bash
+cd /root/projects/golang/tamk && go test ./... -count=1
+```
+
+**ALL tests MUST pass. No exceptions.**
+
+#### 3. Build & Vet (REQUIRED)
+```bash
+cd /root/projects/golang/tamk && go build ./... && go vet ./...
+```
+
+### What Constitutes a Regression
+
+| Check | Pass Criteria | Fail Action |
+|:--|:--|:--|
+| UIAPK build | APK generated, 0 errors | Fix compilation error, do NOT commit |
+| WebAppLocal build | APK generated, 0 errors | Fix compilation error, do NOT commit |
+| WebAppExtern build | APK generated, 0 errors | Fix compilation error, do NOT commit |
+| Go tests | All pass, 0 failures | Fix failing test, do NOT commit |
+| go vet | 0 warnings | Fix vet issue, do NOT commit |
+
+### Regression Test Projects Location
+
+Test projects for validation are created in `/root/testes/`:
+- `RegTestUIAPK/` — Native Android UI project
+- `RegTestWebLocal/` — WebApp with local assets
+- `RegTestWebExtern/` — WebApp with external URL
+
+**Always clean up after testing:**
+```bash
+rm -rf /root/testes/RegTest*
+```
+
+### Anti-Regression Checklist (per task)
+
+- [ ] `go build ./...` passes
+- [ ] `go vet ./...` passes
+- [ ] `go test ./...` passes
+- [ ] `tamk create` works for all 3 project types
+- [ ] `tamk build` works for all 3 project types
+- [ ] No sentinel errors removed or renamed
+- [ ] No repository interfaces changed without implementation update
+- [ ] No template placeholders removed
+- [ ] Clean Architecture dependency rule not violated
 
 ---
 

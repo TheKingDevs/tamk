@@ -45,7 +45,7 @@ check_go() {
         pkg install -y golang
     fi
     local ver
-    ver=$(go version | grep -oP 'go\K[0-9]+\.[0-9]+')
+    ver=$(go version | sed -n 's/.*go\([0-9]*\.[0-9]*\).*/\1/p')
     ok "Go $ver found"
 }
 
@@ -68,7 +68,7 @@ install_binary() {
     
     if [[ -f "$BIN_DIR/tamk" ]]; then
         local current_version
-        current_version=$("$BIN_DIR/tamk" version 2>/dev/null | grep -oP 'v\K[0-9.]+' || echo "")
+        current_version=$("$BIN_DIR/tamk" version 2>/dev/null | sed -n 's/.*v\([0-9.]*\).*/\1/p' || echo "")
         if [[ "$current_version" == "$VERSION" ]]; then
             ok "T.A.M.K v${VERSION} already installed"
             return 0

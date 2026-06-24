@@ -6,13 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/TheKingDevs/tamk/internal/config"
 	"github.com/TheKingDevs/tamk/internal/domain/entity"
 )
 
 type TemplateRepository struct {
-	cfg *config.Config
+	cfg   *config.Config
+	cache sync.Map
 }
 
 func NewTemplateRepository(cfg *config.Config) *TemplateRepository {
@@ -24,6 +26,11 @@ func (r *TemplateRepository) LoadTemplate(ctx context.Context, name string) (str
 }
 
 func (r *TemplateRepository) LoadTemplateForType(ctx context.Context, projectType, name string) (string, error) {
+	key := projectType + ":" + name
+	if cached, ok := r.cache.Load(key); ok {
+		return cached.(string), nil
+	}
+
 	if projectType != "" {
 		dir := r.cfg.GetTemplateDir(projectType)
 		path := filepath.Join(dir, name)
@@ -32,7 +39,9 @@ func (r *TemplateRepository) LoadTemplateForType(ctx context.Context, projectTyp
 		}
 		data, err := os.ReadFile(path)
 		if err == nil {
-			return string(data), nil
+			content := string(data)
+			r.cache.Store(key, content)
+			return content, nil
 		}
 	}
 
@@ -43,7 +52,9 @@ func (r *TemplateRepository) LoadTemplateForType(ctx context.Context, projectTyp
 		}
 		data, err := os.ReadFile(path)
 		if err == nil {
-			return string(data), nil
+			content := string(data)
+			r.cache.Store(key, content)
+			return content, nil
 		}
 	}
 	return "", fmt.Errorf("template %s not found", name)

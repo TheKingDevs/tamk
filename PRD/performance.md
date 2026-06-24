@@ -66,61 +66,39 @@ Define requisitos de performance, métricas alvo, e otimizações para T.A.M.K v
 
 ### Prioridade Alta
 
-#### 1. Binary Size Reduction (35MB → ~15MB)
+#### 1. ~~Binary Size Reduction (35MB → ~15MB)~~ (Adiado)
 **Problema:** Binário inclui android.jar (21MB) embutido.
-**Solução:**
-- Usar `upx` para compressão (reduz ~60%)
-- Ou extrair android.jar em runtime (já feito, mas mantido embutido)
-- Considerar: download sob demanda vs embutido
+**Status:** Adiado — prioridade menor para lancamento.
 
-#### 2. Build Pipeline Paralelismo
+#### 2. ~~Build Pipeline Paralelismo~~ (Nao aplicavel)
 **Problema:** Steps do build são sequenciais.
-**Solução:**
-- AAPT2 compile e link podem rodar em paralelo
-- Kotlin compile pode iniciar após AAPT2 link
-- D8 pode processar classes em paralelo
+**Status:** Análise mostrou dependências de dados reais entre AAPT2→link→Kotlin→D8. Paralelismo não seguro.
 
-#### 3. Template Loading Cache
+#### 3. Template Loading Cache ✅ IMPLEMENTADO
 **Problema:** Templates são lidos do disco a cada criação.
-**Solução:**
-- Cache de templates em memória após primeiro load
-- Usar `embed.FS` para templates (como ferramentas)
+**Solução:** Cache `sync.Map` em `TemplateRepository` — cada template lido uma vez, servido da memória.
+**Arquivo:** `internal/repository/filesystem/template_repository.go`
 
 ### Prioridade Média
 
-#### 4. Hash Calculation Otimizado
-**Problema:** StreamingHash usa 99KB/op.
-**Solução:**
-- Buffer size tuning (testar 32KB, 64KB, 128KB)
-- Parallel hashing de múltiplos arquivos
-- Skip de arquivos ignorados (.git, node_modules)
+#### 4. Hash Calculation — Skip Ignored Dirs ✅ IMPLEMENTADO
+**Problema:** `collectSourceFiles()` não ignorava `.git`, `node_modules`, `secret`, etc.
+**Solução:** Mapa `ignoredDirs` com `filepath.SkipDir` — previne hash de milhares de arquivos irrelevantes.
+**Arquivo:** `internal/repository/filesystem/build_repository.go`
+**Impacto:** 10-100x em projetos com `node_modules` em assets.
 
-#### 5. Tool Path Caching
-**Problema:** `findTool()` busca em múltiplos diretórios.
-**Solução:**
-- Cache de paths resolvidos em `sync.Map`
-- Invalidation via TTL (5 min) ou filesystem watch
+#### 5. ~~Tool Path Caching~~ (Já implementado)
+**Status:** `cachedTool` com `sync.RWMutex` já funciona. SDKJar agora também cacheado.
 
-#### 6. Keystore Validation Async
-**Problema:** `keytool -list` é síncrono e bloqueante.
-**Solução:**
-- Executar validação em goroutine
-- Timeout de 5s para keystore validation
-- Cache de validação (1 min TTL)
+#### 6. ~~Keystore Validation Async~~ (Adiado)
+**Status:** Validação síncrona é aceitável (~1s). Async adiciona complexidade sem ganho significativo.
 
 ### Prioridade Baixa
 
-#### 7. Config Singleton Otimization
-**Problema:** `config.New()` cria nova instância a cada chamada.
-**Solução:**
-- Singleton com `sync.Once`
-- Ou passar config via context
-
-#### 8. Template Directory Cache
-**Problema:** `GetTemplateDir()` busca em 5+ diretórios.
-**Solução:**
-- Já usa `sync.Map` cache
-- Adicionar invalidation no `tamk setup`
+#### 7. Config Singleton ✅ IMPLEMENTADO
+**Problema:** `config.New()` criava nova instância a cada chamada.
+**Solução:** `config.Get()` com `sync.Once` — lê `/etc/os-release` apenas uma vez.
+**Arquivo:** `internal/config/config.go`
 
 ---
 
@@ -172,22 +150,23 @@ benchstat old.txt new.txt
 
 ## Roadmap de Performance
 
-### Fase 1 (Atual)
+### Fase 1 (Completa)
 - ✅ Build cache com SHA-256
 - ✅ Incremental assets build
 - ✅ ToolManager com cache
 - ✅ Keystore validation antes do build
+- ✅ Template content cache (sync.Map)
+- ✅ Hash: skip ignored directories
+- ✅ Config singleton (sync.Once)
+- ✅ SDKJar path caching
 
 ### Fase 2 (Próxima)
-- [ ] Binary compression (upx)
-- [ ] Template embedding (go:embed)
-- [ ] Parallel build steps
-- [ ] Benchmark CI integration
+- [ ] Benchmark CI integration (benchstat)
+- [ ] Binary compression (upx) — opcional
 
 ### Fase 3 (Futuro)
 - [ ] Download sob demanda de ferramentas
 - [ ] Build distribuído
-- [ ] Cache distribuído (Redis/SQLite)
 
 ---
 

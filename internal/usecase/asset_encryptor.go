@@ -39,8 +39,8 @@ func (e *AssetEncryptor) EncryptAssets(projectPath, password string) error {
 			return nil
 		}
 
-		// Skip already encrypted files
-		if strings.HasSuffix(path, ".enc") {
+		// Skip already encrypted files (check magic header)
+		if isEncryptedFile(path) {
 			return nil
 		}
 
@@ -176,14 +176,16 @@ func (e *AssetEncryptor) encryptFile(path string, key, salt []byte) error {
 	output = append(output, iv...)
 	output = append(output, ciphertext...)
 
-	// Write encrypted file
-	encPath := path + ".enc"
-	if err := os.WriteFile(encPath, output, 0o644); err != nil {
-		return err
-	}
+	// Write encrypted data to same path (keeps original filename)
+	return os.WriteFile(path, output, 0o644)
+}
 
-	// Remove original file
-	return os.Remove(path)
+func isEncryptedFile(path string) bool {
+	data, err := os.ReadFile(path)
+	if err != nil || len(data) < len(AssetEncryptionMagic) {
+		return false
+	}
+	return string(data[:len(AssetEncryptionMagic)]) == AssetEncryptionMagic
 }
 
 func deriveEncryptionKey(password string) (key, salt []byte) {

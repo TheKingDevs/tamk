@@ -68,18 +68,41 @@ func NewRootCmd() *cobra.Command {
 	cmd.AddCommand(newUpdateCmd(updateUC))
 	cmd.AddCommand(newVersionCmd())
 	cmd.AddCommand(newShellCmd(cfg, createUC, buildUC, devUC, setupUC, updateUC, runUC, projRepo))
+	cmd.AddCommand(newLibsCmd(cfg))
 
 	return cmd
 }
 
 func newCreateCmd(uc *usecase.CreateProjectUseCase) *cobra.Command {
-	return &cobra.Command{
+	var (
+		name    string
+		projType string
+		version string
+		author  string
+		webURL  string
+		webMode string
+	)
+
+	cmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a new project wizard",
+		Short: "Create a new project",
+		Long:  `Create a new T.A.M.K project. Run without flags for interactive wizard.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if name != "" && projType != "" && version != "" && author != "" {
+				return createProjectFromFlags(context.Background(), uc, name, projType, version, author, webURL, webMode)
+			}
 			return createProjectInteractive(context.Background(), uc)
 		},
 	}
+
+	cmd.Flags().StringVarP(&name, "name", "n", "", "Project name")
+	cmd.Flags().StringVarP(&projType, "type", "t", "", "Project type: ui_apk, webapp, console")
+	cmd.Flags().StringVarP(&version, "version", "v", "1.0.0", "Version (SEMVER)")
+	cmd.Flags().StringVarP(&author, "author", "a", "Developer", "Author name")
+	cmd.Flags().StringVar(&webURL, "url", "file:///android_asset/index.html", "WebApp URL (for webapp type)")
+	cmd.Flags().StringVar(&webMode, "web-mode", "internal", "Web content mode: internal, external")
+
+	return cmd
 }
 
 func newBuildCmd(uc *usecase.BuildProjectUseCase, projRepo *repoFS.ProjectRepository) *cobra.Command {
@@ -258,4 +281,82 @@ func newVersionCmd() *cobra.Command {
 			fmt.Printf("TAMK Home: %s\n", cfg.TAMKHome)
 		},
 	}
+}
+
+func newLibsCmd(cfg *config.Config) *cobra.Command {
+	libMgr := usecase.NewLibraryManager(cfg)
+
+	cmd := &cobra.Command{
+		Use:   "libs",
+		Short: "Manage Android libraries",
+		Long:  `Download, install, and manage Android libraries (AndroidX, Jetpack, etc.)`,
+	}
+
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List available libraries",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return libMgr.ListLibraries()
+		},
+	}
+
+	installCmd := &cobra.Command{
+		Use:   "install [artifact]",
+		Short: "Install a library",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return libMgr.InstallLibrary(context.Background(), args[0])
+		},
+	}
+
+	removeCmd := &cobra.Command{
+		Use:   "remove [artifact]",
+		Short: "Remove an installed library",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return libMgr.RemoveLibrary(args[0])
+		},
+	}
+
+	cpCmd := &cobra.Command{
+		Use:   "classpath",
+		Short: "Show library classpath",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cp, err := libMgr.GetClasspath()
+			if err != nil {
+				return err
+			}
+			if cp == "" {
+				fmt.Println("No libraries installed")
+				return nil
+			}
+			fmt.Println(cp)
+			return nil
+		},
+	}
+
+	installedCmd := &cobra.Command{
+		Use:   "installed",
+		Short: "List installed libraries",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			libs := libMgr.GetInstalledLibraries()
+			if len(libs) == 0 {
+				fmt.Println("No libraries installed")
+				return nil
+			}
+			fmt.Println("Installed libraries:")
+			for _, l := range libs {
+				fmt.Printf("  - %s\n", l)
+			}
+			return nil
+		},
+	}
+
+	cmd.AddCommand(listCmd)
+	cmd.AddCommand(installCmd)
+	cmd.AddCommand(removeCmd)
+	cmd.AddCommand(cpCmd)
+	cmd.AddCommand(installedCmd)
+
+	return cmd
 }
