@@ -60,6 +60,7 @@ Thumbs.db
 # TAMK Project
 # =============================================================================
 development/
+tools/
 assets/cache/
 env/
 tmp/

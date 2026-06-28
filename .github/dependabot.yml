@@ -7,13 +7,29 @@ updates:
       day: monday
       time: "09:00"
       timezone: America/Sao_Paulo
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     labels:
       - dependencies
       - go
+    assignees:
+      - TheKingDevs
+    versioning-strategy: increase-if-necessary
+    groups:
+      go-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+      go-major:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - major
     commit-message:
       prefix: chore
-      prefix-development: chore
       include: scope
 
   - package-ecosystem: github-actions
@@ -23,10 +39,16 @@ updates:
       day: monday
       time: "09:00"
       timezone: America/Sao_Paulo
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     labels:
       - dependencies
       - ci
+    assignees:
+      - TheKingDevs
+    groups:
+      actions-all:
+        patterns:
+          - "*"
     commit-message:
       prefix: chore
       include: scope

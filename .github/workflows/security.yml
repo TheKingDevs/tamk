@@ -35,12 +35,12 @@ jobs:
           cache: true
 
       - name: Run Gosec
-        uses: securego/gosec@v2.27.1
+        uses: securego/gosec@2b963a5e9dc694a95a2fbd4435e6b9902998f766 # v2.27.1
         with:
           args: -no-fail -fmt sarif -out results.sarif ./...
 
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@6e07906b7b1ef0f2ea5a28a89a233a3782262804 # v3.28.3
         with:
           sarif_file: results.sarif
 
