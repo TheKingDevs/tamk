@@ -9,27 +9,29 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/TheKingDevs/tamk/internal/config"
 )
 
-//go:embed binaries/windows/aapt2.exe
-var aapt2Binary []byte
-
 //go:embed binaries/windows/apksigner.jar
 var apksignerJar []byte
-
-//go:embed binaries/windows/zipalign.exe
-var zipalignBinary []byte
 
 //go:embed binaries/windows/d8.jar
 var d8Jar []byte
 
 //go:embed binaries/windows/kotlinc.zip
 var kotlinZip []byte
+
+// Download URLs for tools not embedded in the binary.
+const (
+	aapt2DownloadURL    = "https://dl.google.com/android/maven2/com/android/tools/build/aapt2/8.4.1/aapt2-8.4.1-windows.zip"
+	zipalignDownloadURL = "https://dl.google.com/android/repository/platform-tools-latest-windows.zip"
+)
 
 // embeddedToolManager extracts and caches embedded tools.
 type embeddedToolManager struct {
@@ -57,10 +59,9 @@ func (m *embeddedToolManager) Setup() error {
 		return fmt.Errorf("create tools dir: %w", err)
 	}
 
-	// Extract aapt2.exe
-	aapt2Path := filepath.Join(m.toolsDir, "aapt2.exe")
-	if err := os.WriteFile(aapt2Path, aapt2Binary, 0o755); err != nil {
-		return fmt.Errorf("extract aapt2: %w", err)
+	// Download and extract aapt2.exe
+	if err := m.downloadAAPT2(); err != nil {
+		return fmt.Errorf("download aapt2: %w", err)
 	}
 
 	// Extract apksigner.jar
@@ -69,10 +70,9 @@ func (m *embeddedToolManager) Setup() error {
 		return fmt.Errorf("extract apksigner: %w", err)
 	}
 
-	// Extract zipalign.exe
-	zipalignPath := filepath.Join(m.toolsDir, "zipalign.exe")
-	if err := os.WriteFile(zipalignPath, zipalignBinary, 0o755); err != nil {
-		return fmt.Errorf("extract zipalign: %w", err)
+	// Download and extract zipalign.exe
+	if err := m.downloadZipalign(); err != nil {
+		return fmt.Errorf("download zipalign: %w", err)
 	}
 
 	// Extract d8.jar
@@ -98,6 +98,96 @@ func (m *embeddedToolManager) Setup() error {
 	}
 
 	return nil
+}
+
+func (m *embeddedToolManager) downloadAAPT2() error {
+	aapt2Path := filepath.Join(m.toolsDir, "aapt2.exe")
+	if _, err := os.Stat(aapt2Path); err == nil {
+		return nil
+	}
+
+	data, err := downloadFile(aapt2DownloadURL)
+	if err != nil {
+		return fmt.Errorf("failed to download aapt2: %w", err)
+	}
+
+	zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		return fmt.Errorf("open aapt2 zip: %w", err)
+	}
+
+	for _, f := range zipReader.File {
+		if strings.HasSuffix(f.Name, "aapt2.exe") {
+			rc, err := f.Open()
+			if err != nil {
+				return err
+			}
+			defer rc.Close()
+
+			out, err := os.OpenFile(aapt2Path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
+			if err != nil {
+				return err
+			}
+			defer out.Close()
+
+			_, err = io.Copy(out, rc)
+			return err
+		}
+	}
+
+	return fmt.Errorf("aapt2.exe not found in downloaded zip")
+}
+
+func (m *embeddedToolManager) downloadZipalign() error {
+	zipalignPath := filepath.Join(m.toolsDir, "zipalign.exe")
+	if _, err := os.Stat(zipalignPath); err == nil {
+		return nil
+	}
+
+	data, err := downloadFile(zipalignDownloadURL)
+	if err != nil {
+		return fmt.Errorf("failed to download zipalign: %w", err)
+	}
+
+	zipReader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		return fmt.Errorf("open platform-tools zip: %w", err)
+	}
+
+	for _, f := range zipReader.File {
+		if strings.HasSuffix(f.Name, "zipalign.exe") {
+			rc, err := f.Open()
+			if err != nil {
+				return err
+			}
+			defer rc.Close()
+
+			out, err := os.OpenFile(zipalignPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
+			if err != nil {
+				return err
+			}
+			defer out.Close()
+
+			_, err = io.Copy(out, rc)
+			return err
+		}
+	}
+
+	return fmt.Errorf("zipalign.exe not found in downloaded zip")
+}
+
+func downloadFile(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP %d downloading %s", resp.StatusCode, url)
+	}
+
+	return io.ReadAll(resp.Body)
 }
 
 func (m *embeddedToolManager) IsSetup() bool {

@@ -17,6 +17,18 @@ type stubSystemManager struct {
 	cfg Config
 }
 
+func (m *stubSystemManager) Setup() error {
+	return fmt.Errorf("system tools not available on Windows; use embedded tools")
+}
+
+func (m *stubSystemManager) IsSetup() bool {
+	return false
+}
+
+func (m *stubSystemManager) ToolsDir() string {
+	return ""
+}
+
 func (m *stubSystemManager) AAPT2(_ context.Context) (string, error) {
 	return "", fmt.Errorf("system tools not available on Windows; use embedded tools")
 }

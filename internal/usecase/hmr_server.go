@@ -41,16 +41,18 @@ func (s *HMRServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	s.mu.Lock()
 	s.clients[conn] = true
+	count := len(s.clients)
 	s.mu.Unlock()
 
-	logger.Debug("HMR client connected", "total", len(s.clients))
+	logger.Debug("HMR client connected", "total", count)
 
 	defer func() {
 		s.mu.Lock()
 		delete(s.clients, conn)
+		count := len(s.clients)
 		s.mu.Unlock()
 		conn.Close()
-		logger.Debug("HMR client disconnected", "total", len(s.clients))
+		logger.Debug("HMR client disconnected", "total", count)
 	}()
 
 	for {
@@ -101,8 +103,8 @@ func (s *HMRServer) broadcast(msg any) {
 		return
 	}
 
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	for conn := range s.clients {
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
