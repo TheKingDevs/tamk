@@ -28,16 +28,6 @@ if %ERRORLEVEL% NEQ 0 (
 )
 echo [OK] Go found
 
-REM Check Java
-where java >nul 2>&1
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Java not found
-    echo   Download OpenJDK 21 from: https://adoptium.net/
-    echo   Then run this installer again
-    exit /b 1
-)
-echo [OK] Java found
-
 REM Create directories
 if not exist "%BIN_DIR%" mkdir "%BIN_DIR%"
 
@@ -60,6 +50,19 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo [OK] Binary installed at %BIN_DIR%\tamk.exe
+
+REM Deploy assets
+echo.
+echo [INFO] Deploying assets...
+if not exist "%INSTALL_DIR%\templates" mkdir "%INSTALL_DIR%\templates"
+xcopy /E /I /Y "%~dp0..\templates" "%INSTALL_DIR%\templates" >nul 2>&1
+echo [OK] Templates deployed
+if not exist "%INSTALL_DIR%\libs" mkdir "%INSTALL_DIR%\libs"
+copy /Y "%~dp0..\libs\libraries.json" "%INSTALL_DIR%\libs\" >nul 2>&1
+echo [OK] Libraries deployed
+if not exist "%INSTALL_DIR%\configs" mkdir "%INSTALL_DIR%\configs"
+copy /Y "%~dp0..\configs\*" "%INSTALL_DIR%\configs\" >nul 2>&1
+echo [OK] Configs deployed
 
 REM Add to PATH (current session)
 set "PATH=%BIN_DIR%;%PATH%"

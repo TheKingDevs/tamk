@@ -49,17 +49,29 @@ check_go() {
     ok "Go $ver found"
 }
 
-check_java() {
-    if ! command -v java &>/dev/null; then
-        warn "Java not found. Installing OpenJDK 21..."
-        pkg install -y openjdk-21
-    fi
-    ok "Java found"
-}
-
 # =============================================================================
 # INSTALLATION
 # =============================================================================
+
+deploy_assets() {
+    log "Deploying templates, libs, and configs..."
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local repo_root
+    repo_root="$(dirname "$script_dir")"
+
+    mkdir -p "$INSTALL_DIR/templates"
+    cp -r "$repo_root/templates/"* "$INSTALL_DIR/templates/"
+    ok "Templates deployed"
+
+    mkdir -p "$INSTALL_DIR/libs"
+    cp "$repo_root/libs/libraries.json" "$INSTALL_DIR/libs/"
+    ok "Libraries deployed"
+
+    mkdir -p "$INSTALL_DIR/configs"
+    cp "$repo_root/configs/"* "$INSTALL_DIR/configs/"
+    ok "Configs deployed"
+}
 
 install_binary() {
     log "Installing T.A.M.K v${VERSION}..."
@@ -131,10 +143,10 @@ main() {
     
     check_termux
     check_go
-    check_java
     echo ""
     
     install_binary
+    deploy_assets
     setup_path
     
     echo ""
