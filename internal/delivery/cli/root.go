@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/TheKingDevs/tamk/internal/config"
+	"github.com/TheKingDevs/tamk/internal/domain/entity"
 	repoRemote "github.com/TheKingDevs/tamk/internal/repository"
 	repoFS "github.com/TheKingDevs/tamk/internal/repository/filesystem"
 	"github.com/TheKingDevs/tamk/internal/tools"
@@ -45,8 +46,8 @@ func NewRootCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "tamk",
-		Short: "Termux APK Manager Kit — build Android apps from Termux",
-		Long:  `T.A.M.K (Termux APK Manager Kit) v` + config.Version + ` — Professional automation framework for native Android app development directly in Termux.`,
+		Short: "Termux APK Manager Kit — build Android APKs from any platform",
+		Long:  `T.A.M.K (Termux APK Manager Kit) v` + config.Version + ` — Professional automation framework for native Android app development.`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			logger.Init(verbose)
 		},
@@ -106,9 +107,11 @@ func newCreateCmd(uc *usecase.CreateProjectUseCase) *cobra.Command {
 }
 
 func newBuildCmd(uc *usecase.BuildProjectUseCase, projRepo *repoFS.ProjectRepository) *cobra.Command {
+	var buildTarget string
+
 	cmd := &cobra.Command{
 		Use:   "build",
-		Short: "Build APK from current project",
+		Short: "Build APK or AAB from current project",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cwd, _ := os.Getwd()
 			ctx := cmd.Context()
@@ -122,9 +125,15 @@ func newBuildCmd(uc *usecase.BuildProjectUseCase, projRepo *repoFS.ProjectReposi
 				fmt.Scan(&pwd)
 			}
 
+			targets, err := parseBuildTargets(buildTarget)
+			if err != nil {
+				return fmt.Errorf("invalid build target %q: %w", buildTarget, err)
+			}
+
 			result, err := uc.FullBuild(ctx, usecase.BuildInput{
 				ProjectPath: cwd,
 				Password:    pwd,
+				Targets:     targets,
 				Guardian:    guardian,
 			})
 			if err != nil {
@@ -133,12 +142,43 @@ func newBuildCmd(uc *usecase.BuildProjectUseCase, projRepo *repoFS.ProjectReposi
 			if !result.Success {
 				return fmt.Errorf("build failed: %s: %w", result.ErrorMsg, errors.ErrBuildFailed)
 			}
-			logger.Success("APK ready in", "apk", result.APKPath)
+			if result.APKPath != "" {
+				logger.Success(fmt.Sprintf("APK ready: %s", result.APKPath))
+			}
+			if result.AABPath != "" {
+				logger.Success(fmt.Sprintf("AAB ready: %s", result.AABPath))
+			}
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&buildTarget, "target", "apk", "Build target: apk, aab, or apk,aab")
 	cmd.Flags().BoolVar(&guardian, "guardian", false, "Enable Guardian security protection")
 	return cmd
+}
+
+func parseBuildTargets(s string) ([]entity.BuildTarget, error) {
+	parts := strings.Split(s, ",")
+	targets := make([]entity.BuildTarget, 0, len(parts))
+	seen := make(map[string]bool)
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" || seen[p] {
+			continue
+		}
+		switch p {
+		case string(entity.BuildTargetAPK):
+			targets = append(targets, entity.BuildTargetAPK)
+		case string(entity.BuildTargetAAB):
+			targets = append(targets, entity.BuildTargetAAB)
+		default:
+			return nil, fmt.Errorf("unknown target %q (valid: apk, aab)", p)
+		}
+		seen[p] = true
+	}
+	if len(targets) == 0 {
+		return nil, fmt.Errorf("no valid targets specified (use: apk, aab, or apk,aab)")
+	}
+	return targets, nil
 }
 
 func newDevCmd(uc *usecase.DevModeUseCase, projRepo *repoFS.ProjectRepository, cfg *config.Config) *cobra.Command {

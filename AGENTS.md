@@ -589,7 +589,7 @@ delivery/cli/  (wires dependencies, handles CLI input)
 
 Banners are built directly in the CLI layer using ANSI terminal utilities. Shared helpers live in the CLI package:
 
-- Dynamic width detection (`tput cols` via `os/exec`)
+- Dynamic width detection (`golang.org/x/term.GetSize()`) — no subprocess spawn
 - Text centering, box drawing with Unicode chars
 - Color styles via ANSI constants
 
@@ -837,6 +837,9 @@ RASPSecurityModule.start(context, 5000L) { threat ->
 12. **Async cleanup** — Dev server has complex goroutine lifecycle; preserve proper shutdown.
 13. **Version updates** — Update `config.Version` constant in `internal/config/config.go` for new releases.
 14. **Build cache** — APK existence is verified (`os.Stat`) alongside hash comparison; do not remove this check.
+15. **Never remove existing code** — Do not delete functions, features, files, or interface methods without explicit user approval. If a critical case truly requires removal, report in the anchored summary: (a) why removal is necessary, (b) what problem the removed code caused, (c) what replaces it. The user must explicitly approve before removal.
+16. **Only improve, fix, or update** — The default stance is to extend and enhance existing code, not replace or delete. When you find broken code, fix it — do not rip it out and start over.
+17. **Libraries registry** — `libs/libraries.json` is the shipped library catalog. If missing at runtime, code in `LibraryManager.loadRegistry()` auto-creates it from embedded defaults. Keep both the shipped file and the Go embedded defaults in sync.
 
 ---
 
@@ -924,6 +927,7 @@ rm -rf /root/testes/RegTest*
 - **Config Singleton**: `config.New()` instantiates fresh config per call — consistent paths rely on `TAMK_HOME` env var.
 - **Async Lifecycle**: Dev server runs goroutines; proper shutdown via context cancellation + WaitGroup.
 - **fsnotify**: Optional dependency; dev mode fails gracefully if not available.
+- **Libraries Registry**: `libs/libraries.json` is the shipped library catalog. Both the shipped JSON file and the embedded Go defaults in `LibraryManager.loadRegistry()` must be kept in sync. If one is updated, the other must reflect the change.
 - **Clean Architecture**: Never break the Dependency Rule — `internal/` packages must only import inward.
 
 ---

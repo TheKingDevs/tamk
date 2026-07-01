@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 
+	"golang.org/x/term"
+
 	"github.com/TheKingDevs/tamk/internal/config"
 	"github.com/TheKingDevs/tamk/internal/domain/entity"
 	"github.com/TheKingDevs/tamk/internal/domain/valueobject"
@@ -24,14 +26,12 @@ const (
 )
 
 func termWidth() int {
-	out, err := exec.Command("tput", "cols").Output()
+	w, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
-		return 80
+		w, _, err = term.GetSize(int(os.Stderr.Fd()))
 	}
-	var w int
-	fmt.Sscanf(string(out), "%d", &w)
-	if w < 40 {
-		return 40
+	if err != nil || w < 40 {
+		return 80
 	}
 	return w
 }
@@ -110,9 +110,24 @@ func showBanner() {
 	fmt.Println()
 }
 
+func tryToilet(text string) []byte {
+	out, err := exec.Command("toilet", text).Output()
+	if err == nil && len(out) > 0 {
+		return out
+	}
+	fonts := []string{"mono12", "bigmono12", "ascii12", "future", "smblock"}
+	for _, font := range fonts {
+		o, err := exec.Command("toilet", "-f", font, text).Output()
+		if err == nil && len(o) > 0 {
+			return o
+		}
+	}
+	return nil
+}
+
 func renderArt(text string, width int) string {
-	out, err := exec.Command("toilet", "-f", "standard", "-F", "metal", text).Output()
-	if err != nil || len(out) == 0 {
+	out := tryToilet(text)
+	if len(out) == 0 {
 		return ""
 	}
 	lines := strings.Split(strings.TrimRight(string(out), "\n"), "\n")

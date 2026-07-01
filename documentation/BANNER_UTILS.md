@@ -1,27 +1,27 @@
 # BANNER UTILITIES
 
-Nao existe um pacote separado de Banner. Banners sao construidos diretamente na camada CLI (`internal/delivery/cli/wizard.go`) com codigo inline usando constantes ANSI, `tput cols` para deteccao de largura do terminal, e caracteres Unicode de borda.
+Banners são construídos diretamente na camada CLI (`internal/delivery/cli/wizard.go`) com código inline usando constantes ANSI, `golang.org/x/term.GetSize()` para detecção de largura do terminal, e caracteres Unicode de borda.
 
 ## Logger (`pkg/logger/logger.go`)
 
-Logger baseado em `log/slog` com niveis customizados e cores ANSI.
+Logger baseado em `log/slog` com níveis customizados e cores ANSI.
 
-### Niveis
+### Níveis
 
 - `LevelDebug(-4)` — cinza
 - `LevelInfo(0)` — azul
 - `LevelStep(2)` — ciano
 - `LevelSuccess(4)` — verde
-- `LevelWarn(-4)` — amarelo (reusa nivel slog)
+- `LevelWarn(-4)` — amarelo (reusa nível slog)
 - `LevelError(8)` — vermelho
 
-### Inicializacao
+### Inicialização
 
 ```go
 logger.Init(verbose bool) // verbose = true ativa LevelDebug
 ```
 
-### Funcoes
+### Funções
 
 ```go
 logger.Debug(msg string, args ...any)
@@ -40,17 +40,36 @@ ansiReset, ansiCyan, ansiGreen, ansiYellow, ansiRed, ansiGray, ansiBlue
 
 ## Banner no CLI (`internal/delivery/cli/wizard.go`)
 
-Funcoes auxiliares para o assistente interativo:
+Funções auxiliares para o assistente interativo:
 
-- `termWidth()` — executa `tput cols` para largura do terminal
-- `center(text, width)` — centraliza texto (ignora codigos ANSI)
+- `termWidth()` — usa `golang.org/x/term.GetSize()` para largura do terminal (fallback para 80)
+- `center(text, width)` — centraliza texto (ignora códigos ANSI)
 - `separator(char, color, width)` — linha repetindo caractere
 - `showBanner()` — limpa tela, exibe arte ASCII (via `toilet`) ou fallback com bordas
+- `renderArt(text, width)` — tenta `toilet` com cadeia de fallback de fontes, retorna string vazia se todas falharem
+- `tryToilet(text, font, width)` — executa `toilet` com uma fonte específica, retorna string vazia em erro
+
+### Cadeia de Fontes `toilet`
+
+```go
+fonts := []string{"", "mono12", "bigmono12", "ascii12", "future", "smblock"}
+```
+
+A ordem tenta: fonte padrão (sem `-f`, mais portável) → `mono12` (melhor saída Unicode) → `bigmono12` → `ascii12` → `future` → `smblock`. A primeira que produz saída é usada. Se todas falham (`toilet` não instalado ou sem fontes), `showBanner()` exibe o fallback Go puro com caixa de bordas.
 
 ```go
 showSuccessBanner(name, projType, projPath, pkg string)
 ```
 
-Nao existem classes `Banner`, `DynamicBanner` ou enum `BannerStyle`. A arte do logo e carregada de `assets/images/logo.png` via `toilet`.
+Não existem classes `Banner`, `DynamicBanner` ou enum `BannerStyle`. A arte do logo é gerada via `toilet` com fallback para caracteres Unicode de borda.
+
+## Mudanças da v1.0.0
+
+| Antes | Depois |
+| :--- | :--- |
+| `tput cols` para largura do terminal | `golang.org/x/term.GetSize()` |
+| `toilet -f standard -F metal` | `toilet` (fonte padrão) ou cadeia de fallback |
+| Falha se `standard.tlf` não existia | Fallback para 5 fontes conhecidas + Go puro |
 
 ---
+
