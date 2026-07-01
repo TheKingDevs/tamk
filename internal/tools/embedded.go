@@ -29,8 +29,10 @@ var kotlinZip []byte
 
 // Download URLs for tools not embedded in the binary.
 const (
-	aapt2DownloadURL    = "https://dl.google.com/android/maven2/com/android/tools/build/aapt2/8.4.1/aapt2-8.4.1-windows.zip"
-	zipalignDownloadURL = "https://dl.google.com/android/repository/platform-tools-latest-windows.zip"
+	aapt2DownloadURL       = "https://dl.google.com/android/maven2/com/android/tools/build/aapt2/8.4.1/aapt2-8.4.1-windows.zip"
+	zipalignDownloadURL    = "https://dl.google.com/android/repository/platform-tools-latest-windows.zip"
+	bundletoolDownloadURL  = "https://github.com/google/bundletool/releases/download/1.17.1/bundletool-all-1.17.1.jar"
+	bundletoolDownloadFile = "bundletool.jar"
 )
 
 // embeddedToolManager extracts and caches embedded tools.
@@ -188,6 +190,49 @@ func downloadFile(url string) ([]byte, error) {
 	}
 
 	return io.ReadAll(resp.Body)
+}
+
+func (m *embeddedToolManager) Bundletool(_ context.Context) (string, error) {
+	if p, ok := m.cache.Get("bundletool"); ok {
+		return p, nil
+	}
+
+	if !m.IsSetup() {
+		if err := m.Setup(); err != nil {
+			return "", err
+		}
+	}
+
+	jarPath := filepath.Join(m.toolsDir, bundletoolDownloadFile)
+	if _, err := os.Stat(jarPath); os.IsNotExist(err) {
+		fmt.Println("Downloading bundletool...")
+		if err := m.downloadBundletool(); err != nil {
+			return "", fmt.Errorf("failed to download bundletool: %w", err)
+		}
+	}
+
+	javaPath, err := findTool("java.exe")
+	if err != nil {
+		return "", fmt.Errorf("bundletool requires Java: %w", err)
+	}
+
+	p := fmt.Sprintf("%s -jar %s", javaPath, jarPath)
+	m.cache.Set("bundletool", p)
+	return p, nil
+}
+
+func (m *embeddedToolManager) downloadBundletool() error {
+	jarPath := filepath.Join(m.toolsDir, bundletoolDownloadFile)
+	if _, err := os.Stat(jarPath); err == nil {
+		return nil
+	}
+
+	data, err := downloadFile(bundletoolDownloadURL)
+	if err != nil {
+		return fmt.Errorf("failed to download bundletool: %w", err)
+	}
+
+	return os.WriteFile(jarPath, data, 0o644)
 }
 
 func (m *embeddedToolManager) IsSetup() bool {

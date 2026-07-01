@@ -17,12 +17,45 @@ import (
 	"github.com/TheKingDevs/tamk/pkg/logger"
 )
 
-func apkFilename(project *entity.Project, env string) string {
+func artifactFilename(project *entity.Project, env, ext string) string {
 	slug := strings.ToLower(strings.ReplaceAll(project.Name, " ", "-"))
-	return fmt.Sprintf("%s-%s-%s.apk", slug, project.Version, env)
+	return fmt.Sprintf("%s-%s-%s.%s", slug, project.Version, env, ext)
+}
+
+func apkFilename(project *entity.Project, env string) string {
+	return artifactFilename(project, env, "apk")
+}
+
+func aabFilename(project *entity.Project, env string) string {
+	return artifactFilename(project, env, "aab")
 }
 
 // resolveKeystorePath finds the keystore: project-local first, then fallback to config.
+// extractMinSdkVersion reads the minSdkVersion from AndroidManifest.xml.
+func extractMinSdkVersion(manifestPath string) string {
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return "21"
+	}
+	content := string(data)
+
+	idx := strings.Index(content, "minSdkVersion")
+	if idx == -1 {
+		return "21"
+	}
+	rest := content[idx:]
+	start := strings.IndexAny(rest, "\"")
+	if start == -1 {
+		return "21"
+	}
+	rest = rest[start+1:]
+	end := strings.IndexAny(rest, "\"")
+	if end == -1 {
+		return "21"
+	}
+	return rest[:end]
+}
+
 func resolveKeystorePath(projectPath, cfgKeystore string) string {
 	keystorePath := filepath.Join(projectPath, "secret", "project.keystore")
 	if _, err := os.Stat(keystorePath); os.IsNotExist(err) {
@@ -50,13 +83,13 @@ func validateKeystorePassword(keystorePath, password string) error {
 	)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		logger.Debug("Keystore validation failed", "output", string(output))
+		logger.Debug(fmt.Sprintf("Keystore validation failed: %s", string(output)))
 		return fmt.Errorf("keystore password incorrect: %w", errors.ErrKeystoreInvalidPass)
 	}
 
 	// Verify we actually got a valid response
 	if !strings.Contains(string(output), "Keystore type") && !strings.Contains(string(output), "Entry count") {
-		logger.Debug("Keystore validation failed: unexpected output", "output", string(output))
+		logger.Debug(fmt.Sprintf("Keystore validation failed: unexpected output: %s", string(output)))
 		return fmt.Errorf("keystore password incorrect: %w", errors.ErrKeystoreInvalidPass)
 	}
 
@@ -91,6 +124,7 @@ func NewBuildProjectUseCase(
 type BuildInput struct {
 	ProjectPath string
 	Password    string
+	Targets     []entity.BuildTarget
 	Guardian    bool // Enable Guardian security protection
 }
 
@@ -124,12 +158,32 @@ func (uc *BuildProjectUseCase) FullBuild(ctx context.Context, input BuildInput) 
 
 	mustRecompile, err := uc.buildRepo.MustRecompile(ctx, input.ProjectPath, currentHash)
 	if err == nil && !mustRecompile {
-		expectedAPK := filepath.Join(input.ProjectPath, apkFilename(project, "release"))
-		if _, err := os.Stat(expectedAPK); err == nil {
+		allExist := true
+		targets := input.Targets
+		if len(targets) == 0 {
+			targets = []entity.BuildTarget{entity.BuildTargetAPK}
+		}
+		for _, t := range targets {
+			switch t {
+			case entity.BuildTargetAPK:
+				p := filepath.Join(input.ProjectPath, apkFilename(project, "release"))
+				if _, err := os.Stat(p); err != nil {
+					allExist = false
+					logger.Warn(fmt.Sprintf("APK missing: %s, forcing rebuild", p))
+				}
+			case entity.BuildTargetAAB:
+				p := filepath.Join(input.ProjectPath, aabFilename(project, "release"))
+				if _, err := os.Stat(p); err != nil {
+					allExist = false
+					logger.Warn(fmt.Sprintf("AAB missing: %s, forcing rebuild", p))
+				}
+			}
+		}
+		if allExist {
 			logger.Info("Nothing changed, skipping build")
+			expectedAPK := filepath.Join(input.ProjectPath, apkFilename(project, "release"))
 			return &entity.BuildResult{Success: true, APKPath: expectedAPK}, nil
 		}
-		logger.Warn("APK missing, forcing rebuild", "apk", expectedAPK)
 	}
 
 	// Apply Guardian security if enabled
@@ -140,7 +194,7 @@ func (uc *BuildProjectUseCase) FullBuild(ctx context.Context, input BuildInput) 
 		// Encrypt assets
 		encryptor := &AssetEncryptor{}
 		if err := encryptor.EncryptAssets(input.ProjectPath, input.Password); err != nil {
-			logger.Warn("Asset encryption failed", "error", err)
+			logger.Warn(fmt.Sprintf("Asset encryption failed: %v", err))
 		}
 	}
 
@@ -164,7 +218,7 @@ func (uc *BuildProjectUseCase) AssetsOnlyBuild(ctx context.Context, input BuildI
 	// Validate keystore password before starting build
 	keystorePath := resolveKeystorePath(input.ProjectPath, uc.cfg.Keystore)
 	if err := validateKeystorePassword(keystorePath, input.Password); err != nil {
-		logger.Error("Keystore validation failed", "error", err)
+		logger.Error(fmt.Sprintf("Keystore validation failed: %v", err))
 		return nil, err
 	}
 
@@ -228,12 +282,24 @@ func (uc *BuildProjectUseCase) AssetsOnlyBuild(ctx context.Context, input BuildI
 
 func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity.Project, input BuildInput) *entity.BuildResult {
 	projPath := input.ProjectPath
-	finalName := apkFilename(project, "release")
-	apkPath := filepath.Join(projPath, "app.apk")
-	unsignedPath := filepath.Join(projPath, "app-unsigned.apk")
-	finalPath := filepath.Join(projPath, finalName)
 	resZip := filepath.Join(projPath, "res.zip")
-	objDir := filepath.Join(projPath, "obj")
+
+	// Determine targets
+	targets := input.Targets
+	if len(targets) == 0 {
+		targets = []entity.BuildTarget{entity.BuildTargetAPK}
+	}
+
+	wantAPK := false
+	wantAAB := false
+	for _, t := range targets {
+		switch t {
+		case entity.BuildTargetAPK:
+			wantAPK = true
+		case entity.BuildTargetAAB:
+			wantAAB = true
+		}
+	}
 
 	// Resolve tool paths via ToolManager
 	aapt2Path, err := uc.tools.AAPT2(ctx)
@@ -251,11 +317,6 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 		return failedResult(entity.BuildPhaseD8, err.Error())
 	}
 
-	zipalignPath, err := uc.tools.Zipalign(ctx)
-	if err != nil {
-		return failedResult(entity.BuildPhaseZipalign, err.Error())
-	}
-
 	apksignerPath, err := uc.tools.ApkSigner(ctx)
 	if err != nil {
 		return failedResult(entity.BuildPhaseApkSign, err.Error())
@@ -266,11 +327,67 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 		return failedResult(entity.BuildPhaseAAPT2Link, err.Error())
 	}
 
-	// Build pipeline
+	// Shared: compile resources
 	logger.Step("Compiling resources (AAPT2)...")
 	if out, err := uc.executeOutput(exec.CommandContext(ctx, aapt2Path, "compile", "--dir",
 		filepath.Join(projPath, "res"), "-o", resZip)); err != nil {
 		return failedResult(entity.BuildPhaseAAPT2Compile, string(out))
+	}
+
+	assetsDir := filepath.Join(projPath, "src", "main", "assets")
+	kotlinDir := filepath.Join(projPath, "src", "main", "kotlin")
+
+	// If Guardian is enabled, copy security templates to project
+	if input.Guardian {
+		uc.injectSecurityTemplates(ctx, project, projPath)
+	}
+
+	result := &entity.BuildResult{Success: true}
+
+	// Build APK target
+	if wantAPK {
+		r := uc.buildAPK(ctx, project, input, aapt2Path, kotlincPath, d8Path, apksignerPath, sdkPath, resZip, assetsDir, kotlinDir)
+		if !r.Success {
+			return r
+		}
+		result.APKPath = r.APKPath
+	}
+
+	// Build AAB target
+	if wantAAB {
+		r := uc.buildAAB(ctx, project, input, aapt2Path, kotlincPath, d8Path, apksignerPath, sdkPath, resZip, assetsDir, kotlinDir)
+		if !r.Success {
+			return r
+		}
+		result.AABPath = r.AABPath
+	}
+
+	// Cleanup shared temp files
+	os.Remove(resZip)
+
+	if result.APKPath != "" {
+		logger.Success(fmt.Sprintf("APK ready: %s", result.APKPath))
+	}
+	if result.AABPath != "" {
+		logger.Success(fmt.Sprintf("AAB ready: %s", result.AABPath))
+	}
+	return result
+}
+
+func (uc *BuildProjectUseCase) buildAPK(
+	ctx context.Context, project *entity.Project, input BuildInput,
+	aapt2Path, kotlincPath, d8Path, apksignerPath, sdkPath,
+	resZip, assetsDir, kotlinDir string,
+) *entity.BuildResult {
+	projPath := input.ProjectPath
+	apkPath := filepath.Join(projPath, "app.apk")
+	unsignedPath := filepath.Join(projPath, "app-unsigned.apk")
+	finalPath := filepath.Join(projPath, apkFilename(project, "release"))
+	objDir := filepath.Join(projPath, "obj")
+
+	zipalignPath, err := uc.tools.Zipalign(ctx)
+	if err != nil {
+		return failedResult(entity.BuildPhaseZipalign, err.Error())
 	}
 
 	logger.Step("Linking resources (AAPT2)...")
@@ -285,7 +402,6 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 		resZip,
 		"--auto-add-overlay",
 	}
-	assetsDir := filepath.Join(projPath, "src", "main", "assets")
 	if info, err := os.Stat(assetsDir); err == nil && info.IsDir() {
 		linkArgs = append(linkArgs, "-A", assetsDir)
 	}
@@ -293,64 +409,9 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 		return failedResult(entity.BuildPhaseAAPT2Link, string(out))
 	}
 
-	kotlinDir := filepath.Join(projPath, "src", "main", "kotlin")
-
-	// If Guardian is enabled, copy security templates to project
-	if input.Guardian {
-		uc.injectSecurityTemplates(ctx, project, projPath)
-	}
-
-	logger.Step("Compiling Kotlin sources...")
-	os.MkdirAll(objDir, 0o755)
-
-	classpath := sdkPath
-	libMgr := NewLibraryManager(uc.cfg)
-	if libCP, err := libMgr.GetClasspath(); err == nil && libCP != "" {
-		classpath = sdkPath + string(os.PathListSeparator) + libCP
-		logger.Debug("Library classpath added", "classpath", classpath)
-	}
-
-	kotlinCmd := exec.CommandContext(ctx, kotlincPath,
-		kotlinDir, genDir,
-		"-cp", classpath,
-		"-d", objDir,
-	)
-	if out, err := uc.executeOutput(kotlinCmd); err != nil {
-		logger.Debug("Kotlin compile output", "output", string(out))
-		return failedResult(entity.BuildPhaseKotlinCompile, string(out))
-	}
-
-	// Obfuscate code with ProGuard if Guardian is enabled
-	if input.Guardian {
-		obfuscator := NewProGuardObfuscator()
-		if obfuscator.IsAvailable() {
-			if err := obfuscator.Obfuscate(ctx, objDir, sdkPath, ""); err != nil {
-				logger.Warn("ProGuard obfuscation failed", "error", err)
-			}
-		}
-	}
-
-	logger.Step("Converting to DEX (D8)...")
-	var classFiles []string
-	filepath.Walk(objDir, func(path string, info os.FileInfo, err error) error {
-		if err == nil && !info.IsDir() && strings.HasSuffix(path, ".class") {
-			classFiles = append(classFiles, path)
-		}
-		return nil
-	})
-	if len(classFiles) == 0 {
-		return failedResult(entity.BuildPhaseD8, "no .class files found in "+objDir)
-	}
-	args := []string{"--lib", sdkPath, "--release", "--output", projPath}
-	if libCP, err := libMgr.GetClasspath(); err == nil && libCP != "" {
-		for _, jar := range strings.Split(libCP, string(os.PathListSeparator)) {
-			args = append(args, "--lib", jar)
-		}
-	}
-	args = append(args, classFiles...)
-	d8Cmd := exec.CommandContext(ctx, d8Path, args...)
-	if out, err := uc.executeOutput(d8Cmd); err != nil {
-		return failedResult(entity.BuildPhaseD8, string(out))
+	r := uc.compileAndDex(ctx, project, projPath, kotlincPath, d8Path, sdkPath, objDir, genDir, kotlinDir)
+	if !r.Success {
+		return r
 	}
 
 	logger.Step("Packaging DEX into APK...")
@@ -379,7 +440,6 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 		return failedResult(entity.BuildPhaseApkSign, string(out))
 	}
 
-	os.Remove(resZip)
 	os.RemoveAll(objDir)
 	os.Remove(apkPath)
 	os.Remove(unsignedPath)
@@ -387,9 +447,200 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 	if _, err := os.Stat(classesDex); err == nil {
 		os.Remove(classesDex)
 	}
+	if _, err := os.Stat(genDir); err == nil {
+		os.RemoveAll(genDir)
+	}
 
-	logger.Success("Build completed")
 	return &entity.BuildResult{Success: true, APKPath: finalPath}
+}
+
+func (uc *BuildProjectUseCase) buildAAB(
+	ctx context.Context, project *entity.Project, input BuildInput,
+	aapt2Path, kotlincPath, d8Path, apksignerPath, sdkPath,
+	resZip, assetsDir, kotlinDir string,
+) *entity.BuildResult {
+	projPath := input.ProjectPath
+	protoAPK := filepath.Join(projPath, "base.apk")
+	moduleDir := filepath.Join(projPath, "assets", "cache", "aab-module")
+	moduleZip := filepath.Join(projPath, "module.zip")
+	aabPath := filepath.Join(projPath, "bundle.aab")
+	finalPath := filepath.Join(projPath, aabFilename(project, "release"))
+	objDir := filepath.Join(projPath, "obj")
+
+	logger.Step("Linking resources in proto format (AAPT2)...")
+	genDir := filepath.Join(projPath, "gen")
+	os.MkdirAll(genDir, 0o755)
+	linkArgs := []string{
+		"link", "--proto-format",
+		"-I", sdkPath,
+		"--manifest", filepath.Join(projPath, "AndroidManifest.xml"),
+		"-o", protoAPK,
+		"--java", genDir,
+		resZip,
+		"--auto-add-overlay",
+	}
+	if info, err := os.Stat(assetsDir); err == nil && info.IsDir() {
+		linkArgs = append(linkArgs, "-A", assetsDir)
+	}
+	if out, err := uc.executeOutput(exec.CommandContext(ctx, aapt2Path, linkArgs...)); err != nil {
+		return failedResult(entity.BuildPhaseAAPT2Link, string(out))
+	}
+
+	r := uc.compileAndDex(ctx, project, projPath, kotlincPath, d8Path, sdkPath, objDir, genDir, kotlinDir)
+	if !r.Success {
+		return r
+	}
+
+	// Build AAB module structure manually and sign directly,
+	// avoiding bundletool which requires complex proto-APK restructuring.
+	// An AAB is a ZIP with internal structure:
+	//   base/manifest/AndroidManifest.xml
+	//   base/dex/classes.dex
+	//   base/resources.pb
+	//   base/res/...
+	//   base/assets/...
+
+	logger.Step("Assembling AAB module structure...")
+	os.RemoveAll(moduleDir)
+	baseDir := filepath.Join(moduleDir, "base")
+	os.MkdirAll(filepath.Join(baseDir, "manifest"), 0o755)
+	os.MkdirAll(filepath.Join(baseDir, "dex"), 0o755)
+
+	// Extract proto APK into module dir
+	if out, err := uc.executeOutput(exec.CommandContext(ctx, "unzip", "-o", protoAPK, "-d", baseDir)); err != nil {
+		return failedResult(entity.BuildPhaseAABBuild, string(out))
+	}
+
+	// Rearrange AndroidManifest into manifest/
+	manifestSrc := filepath.Join(baseDir, "AndroidManifest.xml")
+	manifestDst := filepath.Join(baseDir, "manifest", "AndroidManifest.xml")
+	if _, err := os.Stat(manifestSrc); err == nil {
+		if err := os.Rename(manifestSrc, manifestDst); err != nil {
+			return failedResult(entity.BuildPhaseAABBuild, err.Error())
+		}
+	}
+
+	// Move classes.dex into dex/
+	dexSrc := filepath.Join(projPath, "classes.dex")
+	dexDst := filepath.Join(baseDir, "dex", "classes.dex")
+	if _, err := os.Stat(dexSrc); err == nil {
+		if err := os.Rename(dexSrc, dexDst); err != nil {
+			return failedResult(entity.BuildPhaseAABBuild, err.Error())
+		}
+	}
+
+	// Zip module content (baseDir) into module.zip for bundletool
+	os.Remove(moduleZip)
+	if err := zipDir(baseDir, moduleZip); err != nil {
+		return failedResult(entity.BuildPhaseAABBuild, err.Error())
+	}
+
+	// Build AAB via bundletool
+	logger.Step("Building Android App Bundle...")
+	os.Remove(aabPath)
+	bundletoolPath, err := uc.tools.Bundletool(ctx)
+	if err != nil {
+		return failedResult(entity.BuildPhaseAABBuild, err.Error())
+	}
+	btArgs := strings.Fields(bundletoolPath)
+	btArgs = append(btArgs, "build-bundle",
+		"--modules", moduleZip,
+		"--output", aabPath,
+	)
+	btCmd := exec.CommandContext(ctx, btArgs[0], btArgs[1:]...)
+	if out, err := uc.executeOutput(btCmd); err != nil {
+		return failedResult(entity.BuildPhaseAABBuild, string(out))
+	}
+
+	keystorePath := resolveKeystorePath(projPath, uc.cfg.Keystore)
+
+	logger.Step("Signing AAB...")
+	minSdk := extractMinSdkVersion(filepath.Join(projPath, "AndroidManifest.xml"))
+	signArgs := strings.Fields(apksignerPath)
+	signArgs = append(signArgs, "sign",
+		"--ks", keystorePath,
+		"--ks-pass", "pass:"+input.Password,
+		"--min-sdk-version", minSdk,
+		"--out", finalPath,
+		aabPath,
+	)
+	signCmd := exec.CommandContext(ctx, signArgs[0], signArgs[1:]...)
+	if out, err := uc.executeOutput(signCmd); err != nil {
+		return failedResult(entity.BuildPhaseApkSign, string(out))
+	}
+
+	os.RemoveAll(objDir)
+	os.Remove(protoAPK)
+	os.Remove(aabPath)
+	os.Remove(moduleZip)
+	os.RemoveAll(moduleDir)
+	if _, err := os.Stat(genDir); err == nil {
+		os.RemoveAll(genDir)
+	}
+
+	return &entity.BuildResult{Success: true, AABPath: finalPath}
+}
+
+// compileAndDex compiles Kotlin sources and converts to DEX. Shared between APK and AAB builds.
+func (uc *BuildProjectUseCase) compileAndDex(
+	ctx context.Context, project *entity.Project, projPath,
+	kotlincPath, d8Path, sdkPath, objDir, genDir, kotlinDir string,
+) *entity.BuildResult {
+	logger.Step("Compiling Kotlin sources...")
+	os.MkdirAll(objDir, 0o755)
+
+	classpath := sdkPath
+	libMgr := NewLibraryManager(uc.cfg)
+	if libCP, err := libMgr.GetClasspath(); err == nil && libCP != "" {
+		classpath = sdkPath + string(os.PathListSeparator) + libCP
+		logger.Debug(fmt.Sprintf("Library classpath added: %s", classpath))
+	}
+
+	kotlinCmd := exec.CommandContext(ctx, kotlincPath,
+		kotlinDir, genDir,
+		"-cp", classpath,
+		"-d", objDir,
+	)
+	if out, err := uc.executeOutput(kotlinCmd); err != nil {
+		logger.Debug(fmt.Sprintf("Kotlin compile output: %s", string(out)))
+		return failedResult(entity.BuildPhaseKotlinCompile, string(out))
+	}
+
+	// Obfuscate code with ProGuard if Guardian is enabled
+	if project.Security.Level != "" && project.Security.Level != entity.SecurityLevelNone {
+		obfuscator := NewProGuardObfuscator()
+		if obfuscator.IsAvailable() {
+			if err := obfuscator.Obfuscate(ctx, objDir, sdkPath, ""); err != nil {
+				logger.Warn(fmt.Sprintf("ProGuard obfuscation failed: %v", err))
+			}
+		}
+	}
+
+	logger.Step("Converting to DEX (D8)...")
+	var classFiles []string
+	filepath.Walk(objDir, func(path string, info os.FileInfo, err error) error {
+		if err == nil && !info.IsDir() && strings.HasSuffix(path, ".class") {
+			classFiles = append(classFiles, path)
+		}
+		return nil
+	})
+	if len(classFiles) == 0 {
+		return failedResult(entity.BuildPhaseD8, "no .class files found in "+objDir)
+	}
+
+	args := []string{"--lib", sdkPath, "--release", "--output", projPath}
+	if libCP, err := libMgr.GetClasspath(); err == nil && libCP != "" {
+		for _, jar := range strings.Split(libCP, string(os.PathListSeparator)) {
+			args = append(args, "--lib", jar)
+		}
+	}
+	args = append(args, classFiles...)
+	d8Cmd := exec.CommandContext(ctx, d8Path, args...)
+	if out, err := uc.executeOutput(d8Cmd); err != nil {
+		return failedResult(entity.BuildPhaseD8, string(out))
+	}
+
+	return &entity.BuildResult{Success: true}
 }
 
 func (uc *BuildProjectUseCase) PushAssetToDevice(ctx context.Context, projectPath, assetPath string) error {
@@ -439,7 +690,7 @@ func (uc *BuildProjectUseCase) injectSecurityTemplates(ctx context.Context, proj
 		tmplPath := filepath.Join(uc.cfg.TAMKHome, "templates", "security", "kotlin", tmpl)
 		tmplContent, err := os.ReadFile(tmplPath)
 		if err != nil {
-			logger.Debug("Security template not found", "template", tmpl)
+			logger.Debug(fmt.Sprintf("Security template not found: %s", tmpl))
 			continue
 		}
 
@@ -449,11 +700,11 @@ func (uc *BuildProjectUseCase) injectSecurityTemplates(ctx context.Context, proj
 		// Write to security directory
 		outName := strings.Replace(tmpl, ".tmpl", "", 1)
 		if err := os.WriteFile(filepath.Join(securityDir, outName), []byte(content), 0o644); err != nil {
-			logger.Debug("Failed to write security template", "template", outName, "error", err)
+			logger.Debug(fmt.Sprintf("Failed to write security template %s: %v", outName, err))
 		}
 	}
 
-	logger.Debug("Security templates injected", "dir", securityDir, "count", len(securityTemplates))
+	logger.Debug(fmt.Sprintf("Security templates injected to %s: %d templates", securityDir, len(securityTemplates)))
 }
 
 func (uc *BuildProjectUseCase) execute(cmd *exec.Cmd) error {
@@ -468,7 +719,7 @@ func (uc *BuildProjectUseCase) executeOutput(cmd *exec.Cmd) ([]byte, error) {
 
 func failedResult(phase entity.BuildPhase, msg string) *entity.BuildResult {
 	err := &errors.BuildError{Phase: string(phase), Err: fmt.Errorf("%s", msg)}
-	logger.Error("Build failed", "phase", string(phase), "error", err)
+	logger.Error(fmt.Sprintf("Build failed at phase %s: %s", string(phase), err))
 	return &entity.BuildResult{
 		Success:  false,
 		Phase:    phase,

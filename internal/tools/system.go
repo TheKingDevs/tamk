@@ -58,6 +58,32 @@ func (m *systemToolManager) ToolsDir() string {
 	return m.toolsDir
 }
 
+func (m *systemToolManager) Bundletool(_ context.Context) (string, error) {
+	if p, ok := m.cache.Get("bundletool"); ok {
+		return p, nil
+	}
+
+	p, err := findTool("bundletool")
+	if err == nil {
+		m.cache.Set("bundletool", p)
+		return p, nil
+	}
+
+	jar, jarErr := findTool("bundletool.jar")
+	if jarErr != nil {
+		return "", fmt.Errorf("bundletool not found: install from https://github.com/google/bundletool/releases: %w", err)
+	}
+
+	java, javaErr := findTool("java")
+	if javaErr != nil {
+		return "", fmt.Errorf("bundletool.jar found but java not available: %w", javaErr)
+	}
+
+	p = fmt.Sprintf("%s -jar %s", java, jar)
+	m.cache.Set("bundletool", p)
+	return p, nil
+}
+
 func (m *systemToolManager) AAPT2(_ context.Context) (string, error) {
 	if p, ok := m.cache.Get("aapt2"); ok {
 		return p, nil

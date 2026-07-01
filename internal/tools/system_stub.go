@@ -29,6 +29,10 @@ func (m *stubSystemManager) ToolsDir() string {
 	return ""
 }
 
+func (m *stubSystemManager) Bundletool(_ context.Context) (string, error) {
+	return "", fmt.Errorf("system tools not available on Windows; use embedded tools")
+}
+
 func (m *stubSystemManager) AAPT2(_ context.Context) (string, error) {
 	return "", fmt.Errorf("system tools not available on Windows; use embedded tools")
 }

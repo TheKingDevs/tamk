@@ -104,6 +104,43 @@ func TestValidateKeystorePassword_FileNotFound(t *testing.T) {
 	}
 }
 
+func TestAabFilename(t *testing.T) {
+	tests := []struct {
+		name    string
+		project *entity.Project
+		env     string
+		want    string
+	}{
+		{
+			name: "release aab",
+			project: &entity.Project{
+				Name:    "My App",
+				Version: "1.0.0",
+			},
+			env:  "release",
+			want: "my-app-1.0.0-release.aab",
+		},
+		{
+			name: "debug aab",
+			project: &entity.Project{
+				Name:    "TestProject",
+				Version: "0.1.0",
+			},
+			env:  "debug",
+			want: "testproject-0.1.0-debug.aab",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := aabFilename(tt.project, tt.env)
+			if got != tt.want {
+				t.Errorf("aabFilename() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFailedResult(t *testing.T) {
 	result := failedResult(entity.BuildPhaseAAPT2Compile, "test error message")
 

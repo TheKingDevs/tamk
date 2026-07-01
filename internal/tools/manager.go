@@ -41,6 +41,9 @@ type ToolManager interface {
 	// KotlinCompiler returns path to the kotlinc script or binary.
 	KotlinCompiler(ctx context.Context) (string, error)
 
+	// Bundletool returns path to bundletool binary or jar.
+	Bundletool(ctx context.Context) (string, error)
+
 	// SDKJar returns path to android.jar.
 	SDKJar() (string, error)
 

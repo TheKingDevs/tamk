@@ -10,11 +10,20 @@ const (
 	BuildPhasePackageDEX    BuildPhase = "package_dex"
 	BuildPhaseZipalign      BuildPhase = "zipalign"
 	BuildPhaseApkSign       BuildPhase = "apk_sign"
+	BuildPhaseAABBuild      BuildPhase = "aab_build"
+)
+
+type BuildTarget string
+
+const (
+	BuildTargetAPK BuildTarget = "apk"
+	BuildTargetAAB BuildTarget = "aab"
 )
 
 type BuildResult struct {
 	Success  bool
 	APKPath  string
+	AABPath  string
 	Phase    BuildPhase
 	ErrorMsg string
 }

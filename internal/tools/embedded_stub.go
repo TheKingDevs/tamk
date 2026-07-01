@@ -29,6 +29,10 @@ func (m *stubEmbeddedManager) ToolsDir() string {
 	return ""
 }
 
+func (m *stubEmbeddedManager) Bundletool(_ context.Context) (string, error) {
+	return "", fmt.Errorf("embedded tools not available on %s", runtime.GOOS)
+}
+
 func (m *stubEmbeddedManager) AAPT2(_ context.Context) (string, error) {
 	return "", fmt.Errorf("embedded tools not available on %s", runtime.GOOS)
 }
