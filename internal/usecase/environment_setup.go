@@ -27,7 +27,7 @@ const sdkZipName = "platform-30_r03.zip"
 
 func (uc *SetupEnvironmentUseCase) Execute(ctx context.Context) error {
 	logger.Info("Setting up TAMK environment...")
-	logger.Info("Detected environment", "env", uc.cfg.Env)
+	logger.Info(fmt.Sprintf("Detected environment: %s", uc.cfg.Env))
 
 	if err := uc.ensureDirectories(); err != nil {
 		return fmt.Errorf("failed to create directories: %w", err)
@@ -39,11 +39,11 @@ func (uc *SetupEnvironmentUseCase) Execute(ctx context.Context) error {
 		DevDir:  uc.cfg.DevDir,
 		SDKPath: uc.cfg.SDKPath,
 	})
-	logger.Info("Tools dir", "path", toolMgr.ToolsDir())
+	logger.Info(fmt.Sprintf("Tools dir: %s", toolMgr.ToolsDir()))
 	if err := toolMgr.Setup(); err != nil {
-		logger.Warn("Failed to extract embedded tools", "error", err)
+		logger.Warn(fmt.Sprintf("Failed to extract embedded tools: %v", err))
 	} else {
-		logger.Success("Embedded tools extracted", "dir", toolMgr.ToolsDir())
+		logger.Success(fmt.Sprintf("Embedded tools extracted to %s", toolMgr.ToolsDir()))
 	}
 
 	if err := uc.downloadSDK(ctx); err != nil {
@@ -55,9 +55,9 @@ func (uc *SetupEnvironmentUseCase) Execute(ctx context.Context) error {
 	}
 
 	logger.Success("Environment setup complete")
-	logger.Info("SDK path", "path", uc.cfg.SDKPath)
-	logger.Info("Keystore path", "path", uc.cfg.Keystore)
-	logger.Info("Tools dir", "path", toolMgr.ToolsDir())
+	logger.Info(fmt.Sprintf("SDK path: %s", uc.cfg.SDKPath))
+	logger.Info(fmt.Sprintf("Keystore path: %s", uc.cfg.Keystore))
+	logger.Info(fmt.Sprintf("Tools dir: %s", toolMgr.ToolsDir()))
 
 	return nil
 }
@@ -66,14 +66,14 @@ func (uc *SetupEnvironmentUseCase) VerifyEnvironment() bool {
 	allGood := true
 
 	if _, err := os.Stat(uc.cfg.SDKPath); os.IsNotExist(err) {
-		logger.Warn("SDK not found", "path", uc.cfg.SDKPath)
+		logger.Warn(fmt.Sprintf("SDK not found at %s", uc.cfg.SDKPath))
 		allGood = false
 	} else {
 		logger.Info("SDK found")
 	}
 
 	if _, err := os.Stat(uc.cfg.Keystore); os.IsNotExist(err) {
-		logger.Warn("Keystore not found", "path", uc.cfg.Keystore)
+		logger.Warn(fmt.Sprintf("Keystore not found at %s", uc.cfg.Keystore))
 		allGood = false
 	} else {
 		logger.Info("Keystore found")
@@ -82,10 +82,10 @@ func (uc *SetupEnvironmentUseCase) VerifyEnvironment() bool {
 	tools := []string{"aapt2", "kotlinc", "d8", "apksigner", "zipalign", "keytool"}
 	for _, tool := range tools {
 		if _, err := exec.LookPath(tool); err != nil {
-			logger.Warn("Tool not found", "tool", tool)
+			logger.Warn(fmt.Sprintf("Tool not found: %s", tool))
 			allGood = false
 		} else {
-			logger.Info("Tool found", "tool", tool)
+			logger.Info(fmt.Sprintf("Tool found: %s", tool))
 		}
 	}
 

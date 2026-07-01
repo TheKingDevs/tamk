@@ -103,7 +103,7 @@ func (uc *CreateProjectUseCase) Execute(ctx context.Context, input CreateProject
 		return nil, fmt.Errorf("failed to save project config: %w", err)
 	}
 
-	logger.Success("Project created successfully", "path", projectPath)
+	logger.Success("Project created successfully in " + projectPath)
 
 	return &CreateProjectOutput{
 		ProjectPath: projectPath,
@@ -179,7 +179,7 @@ func (uc *CreateProjectUseCase) processMappings(
 		tmplContent, err := uc.tmplRepo.LoadTemplateForType(ctx, string(project.Type), m.Template)
 		if err != nil {
 			if m.Internal {
-				logger.Warn("Template not found (skipping)", "template", m.Template)
+				logger.Warn(fmt.Sprintf("Template not found (skipping): %s", m.Template))
 				continue
 			}
 			return fmt.Errorf("required template %s not found: %w", m.Template, err)
@@ -280,6 +280,6 @@ func (uc *CreateProjectUseCase) generateKeystore(ctx context.Context, project *e
 		return fmt.Errorf("failed to set keystore permissions: %w", err)
 	}
 
-	logger.Success("Keystore generated", "path", keystorePath)
+	logger.Success("Keystore generated in " + keystorePath)
 	return nil
 }

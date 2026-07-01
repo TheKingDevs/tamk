@@ -37,7 +37,7 @@ func (uc *RunUseCase) Execute(ctx context.Context, input RunInput) (*RunOutput, 
 		return nil, err
 	}
 
-	logger.Step("Compiling", "file", filePath)
+	logger.Step(fmt.Sprintf("Compiling %s", filePath))
 
 	// Get kotlinc path
 	kotlincPath, err := uc.tools.KotlinCompiler(ctx)
@@ -55,7 +55,7 @@ func (uc *RunUseCase) Execute(ctx context.Context, input RunInput) (*RunOutput, 
 	// Get SDK jar path for classpath
 	sdkPath, err := uc.tools.SDKJar()
 	if err != nil {
-		logger.Warn("SDK jar not found, compiling without classpath", "error", err)
+		logger.Warn(fmt.Sprintf("SDK jar not found, compiling without classpath: %v", err))
 		sdkPath = ""
 	}
 
@@ -82,7 +82,7 @@ func (uc *RunUseCase) Execute(ctx context.Context, input RunInput) (*RunOutput, 
 		return nil, err
 	}
 
-	logger.Step("Running", "class", mainClass)
+	logger.Step(fmt.Sprintf("Running %s", mainClass))
 
 	// Find kotlin runtime
 	kotlinPath := filepath.Dir(kotlincPath)

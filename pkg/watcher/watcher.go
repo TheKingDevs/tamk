@@ -1,6 +1,7 @@
 package watcher
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -115,7 +116,7 @@ func (w *Watcher) watchLoop() {
 	defer w.wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Error("Watcher watchLoop panicked", "recover", r)
+			logger.Error(fmt.Sprintf("Watcher watchLoop panicked: %v", r))
 		}
 	}()
 	if w.watcher == nil {
@@ -137,7 +138,7 @@ func (w *Watcher) watchLoop() {
 			if !ok {
 				return
 			}
-			logger.Warn("Watcher error", "error", err)
+			logger.Warn(fmt.Sprintf("Watcher error: %v", err))
 		case <-w.done:
 			return
 		}
@@ -155,7 +156,7 @@ func (w *Watcher) processEvents() {
 	defer w.wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Error("Watcher panicked", "recover", r)
+			logger.Error(fmt.Sprintf("Watcher panicked: %v", r))
 		}
 	}()
 	if w.watcher == nil {

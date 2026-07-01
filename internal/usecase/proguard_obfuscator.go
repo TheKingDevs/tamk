@@ -71,7 +71,7 @@ func (p *ProGuardObfuscator) Obfuscate(ctx context.Context, objDir, sdkPath, con
 	cmd := exec.CommandContext(ctx, p.proguardPath, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		logger.Debug("ProGuard output", "output", string(output))
+		logger.Debug(fmt.Sprintf("ProGuard output: %s", string(output)))
 		return fmt.Errorf("proguard failed: %w", err)
 	}
 

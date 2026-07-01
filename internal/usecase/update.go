@@ -55,14 +55,10 @@ func (uc *UpdateUseCase) PrintUpdateInfo(info *entity.UpdateInfo) {
 		entity.UpdateLevelOptional: "OPTIONAL",
 	}
 
-	logger.Info("Update available",
-		"current", info.CurrentVersion,
-		"latest", info.LatestVersion,
-		"level", levelName[info.Level],
-	)
+	logger.Info(fmt.Sprintf("Update available: %s -> %s (%s)", info.CurrentVersion, info.LatestVersion, levelName[info.Level]))
 
 	if info.ReleaseNotes != "" {
-		logger.Info("Release notes", "notes", formatReleaseNotes(info.ReleaseNotes))
+		logger.Info(fmt.Sprintf("Release notes: %s", formatReleaseNotes(info.ReleaseNotes)))
 	}
 }
 
@@ -78,7 +74,7 @@ func (uc *UpdateUseCase) Install(ctx context.Context, info *entity.UpdateInfo) e
 		return fmt.Errorf("no update info provided")
 	}
 
-	logger.Step("Installing update", "from", info.CurrentVersion, "to", info.LatestVersion)
+	logger.Step(fmt.Sprintf("Installing update from %s to %s", info.CurrentVersion, info.LatestVersion))
 
 	method := uc.detectUpdateMethod()
 
@@ -88,8 +84,7 @@ func (uc *UpdateUseCase) Install(ctx context.Context, info *entity.UpdateInfo) e
 	case "go":
 		return uc.installViaGoInstall(ctx)
 	default:
-		logger.Warn("No update method available. Install manually.",
-			"download", info.DownloadURL)
+		logger.Warn(fmt.Sprintf("No update method available. Install manually from %s", info.DownloadURL))
 		return nil
 	}
 }
@@ -116,7 +111,7 @@ func (uc *UpdateUseCase) installViaGit(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("git pull failed: %s: %w", string(out), err)
 	}
-	logger.Success("Updated via git", "output", strings.TrimSpace(string(out)))
+	logger.Success(fmt.Sprintf("Updated via git: %s", strings.TrimSpace(string(out))))
 	return nil
 }
 

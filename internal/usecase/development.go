@@ -89,23 +89,23 @@ func (uc *DevModeUseCase) Start(ctx context.Context, projectPath, password strin
 	mux.HandleFunc("/", uc.hmr.HandleWebSocket)
 	listener, err := net.Listen("tcp", ":8765")
 	if err != nil {
-		logger.Warn("HMR WebSocket server failed to start", "error", err)
+		logger.Warn(fmt.Sprintf("HMR WebSocket server failed to start: %v", err))
 	} else {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					logger.Error("HMR server panicked", "recover", r)
+					logger.Error(fmt.Sprintf("HMR server panicked: %v", r))
 				}
 			}()
 			if err := http.Serve(listener, mux); err != nil && err != http.ErrServerClosed {
-				logger.Debug("HMR server stopped", "error", err)
+				logger.Debug(fmt.Sprintf("HMR server stopped: %v", err))
 			}
 		}()
-		logger.Success("HMR server started", "port", 8765)
+		logger.Success(fmt.Sprintf("HMR server started on port %d", 8765))
 	}
 
 	logger.Success("Dev mode started")
-	logger.Info("Watching for changes", "dir", uc.assetsDir)
+	logger.Info(fmt.Sprintf("Watching for changes in %s", uc.assetsDir))
 	logger.Info("Press Ctrl+C to stop")
 
 	return nil
@@ -124,15 +124,15 @@ func (uc *DevModeUseCase) onFileChanged(path string) {
 
 	if uc.hmr != nil && uc.hmr.ClientCount() > 0 {
 		uc.hmr.OnFileChanged(path)
-		logger.Info(fmt.Sprintf("%s changed, HMR push sent", ext), "file", path, "clients", uc.hmr.ClientCount())
+		logger.Info(fmt.Sprintf("%s changed, HMR push sent to %d clients", ext, uc.hmr.ClientCount()))
 		return
 	}
 
 	switch ext {
 	case ".css", ".js":
-		logger.Info(fmt.Sprintf("%s changed (no HMR clients, connect browser)", ext), "file", path)
+		logger.Info(fmt.Sprintf("%s changed (no HMR clients, connect browser)", ext))
 	default:
-		logger.Info("File changed, triggering rebuild", "file", path)
+		logger.Info(fmt.Sprintf("File changed, triggering rebuild: %s", path))
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 		uc.quickAssetsBuild(ctx)
@@ -161,12 +161,12 @@ func (uc *DevModeUseCase) quickAssetsBuild(ctx context.Context) {
 		Password:    pass,
 	})
 	if err != nil {
-		logger.Error("Rebuild failed", "error", err)
+		logger.Error(fmt.Sprintf("Rebuild failed: %v", err))
 		return
 	}
 
 	if result.Success {
-		logger.Success("Assets rebuilt", "apk", result.APKPath)
+		logger.Success(fmt.Sprintf("Assets rebuilt: %s", result.APKPath))
 	}
 }
 
@@ -183,7 +183,7 @@ func (uc *DevModeUseCase) installAPK() {
 
 	cmd := exec.Command("adb", "install", "-r", apkPath)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		logger.Error("Install failed", "error", string(out))
+		logger.Error(fmt.Sprintf("Install failed: %s", string(out)))
 	} else {
 		logger.Success("APK installed")
 	}

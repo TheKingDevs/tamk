@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -35,7 +36,7 @@ func NewHMRServer(assetsDir string) *HMRServer {
 func (s *HMRServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logger.Error("WebSocket upgrade failed", "error", err)
+		logger.Error(fmt.Sprintf("WebSocket upgrade failed: %v", err))
 		return
 	}
 
@@ -44,7 +45,7 @@ func (s *HMRServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	count := len(s.clients)
 	s.mu.Unlock()
 
-	logger.Debug("HMR client connected", "total", count)
+	logger.Debug(fmt.Sprintf("HMR client connected, total: %d", count))
 
 	defer func() {
 		s.mu.Lock()
@@ -52,7 +53,7 @@ func (s *HMRServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		count := len(s.clients)
 		s.mu.Unlock()
 		conn.Close()
-		logger.Debug("HMR client disconnected", "total", count)
+		logger.Debug(fmt.Sprintf("HMR client disconnected, total: %d", count))
 	}()
 
 	for {
@@ -62,7 +63,7 @@ func (s *HMRServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 		var m HMRMessage
 		if err := json.Unmarshal(msg, &m); err == nil {
-			logger.Debug("HMR client message", "type", m.Type)
+			logger.Debug(fmt.Sprintf("HMR client message type: %s", m.Type))
 		}
 	}
 }
@@ -108,7 +109,7 @@ func (s *HMRServer) broadcast(msg any) {
 
 	for conn := range s.clients {
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
-			logger.Debug("HMR send failed", "error", err)
+			logger.Debug(fmt.Sprintf("HMR send failed: %v", err))
 			conn.Close()
 			delete(s.clients, conn)
 		}

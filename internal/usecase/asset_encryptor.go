@@ -50,7 +50,7 @@ func (e *AssetEncryptor) EncryptAssets(projectPath, password string) error {
 		}
 
 		if err := e.encryptFile(path, key, salt); err != nil {
-			logger.Warn("Failed to encrypt asset", "file", path, "error", err)
+			logger.Warn(fmt.Sprintf("Failed to encrypt asset %s: %v", path, err))
 			return nil // Non-fatal
 		}
 
@@ -63,7 +63,7 @@ func (e *AssetEncryptor) EncryptAssets(projectPath, password string) error {
 	}
 
 	if encryptedCount > 0 {
-		logger.Info("Encrypted assets", "count", encryptedCount)
+		logger.Info(fmt.Sprintf("Encrypted assets: %d", encryptedCount))
 	}
 
 	return nil

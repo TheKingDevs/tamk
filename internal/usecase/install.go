@@ -72,7 +72,7 @@ func (uc *InstallUseCase) Serve(ctx context.Context, projectPath string, port in
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				logger.Error("Install shutdown panicked", "recover", r)
+				logger.Error(fmt.Sprintf("Install shutdown panicked: %v", r))
 			}
 		}()
 		<-ctx.Done()
@@ -82,11 +82,11 @@ func (uc *InstallUseCase) Serve(ctx context.Context, projectPath string, port in
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				logger.Error("Install server panicked", "recover", r)
+				logger.Error(fmt.Sprintf("Install server panicked: %v", r))
 			}
 		}()
 		if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
-			logger.Error("Install server error", "error", err)
+			logger.Error(fmt.Sprintf("Install server error: %v", err))
 		}
 	}()
 
@@ -99,7 +99,7 @@ func (uc *InstallUseCase) Serve(ctx context.Context, projectPath string, port in
 	fmt.Println()
 
 	if err := qrcode.PrintTerminal(url); err != nil {
-		logger.Warn("QR code display failed", "error", err)
+		logger.Warn(fmt.Sprintf("QR code display failed: %v", err))
 	}
 
 	fmt.Println()
