@@ -67,7 +67,16 @@ func (m *LibraryManager) loadRegistry() error {
 	registryPath := filepath.Join(m.cfg.TAMKHome, "libs", "libraries.json")
 	data, err := os.ReadFile(registryPath)
 	if err != nil {
-		return fmt.Errorf("failed to load library registry: %w", err)
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("failed to load library registry: %w", err)
+		}
+		logger.Debug(fmt.Sprintf("libraries.json not found at %s, creating default registry", registryPath))
+		registry := defaultLibraryRegistry()
+		if err := m.persistRegistry(registryPath, registry); err != nil {
+			logger.Warn(fmt.Sprintf("could not persist default library registry: %v", err))
+		}
+		m.registry = registry
+		return nil
 	}
 
 	var registry LibraryRegistry
@@ -77,6 +86,184 @@ func (m *LibraryManager) loadRegistry() error {
 
 	m.registry = &registry
 	return nil
+}
+
+func (m *LibraryManager) persistRegistry(path string, reg *LibraryRegistry) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("failed to create libs directory: %w", err)
+	}
+	data, err := json.MarshalIndent(reg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal registry: %w", err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return fmt.Errorf("failed to write registry: %w", err)
+	}
+	return nil
+}
+
+func defaultLibraryRegistry() *LibraryRegistry {
+	return &LibraryRegistry{
+		Version: "1.0.0",
+		Categories: map[string]string{
+			"kotlin":      "Kotlin",
+			"kotlinx":     "KotlinX",
+			"networking":  "Networking",
+			"json":        "JSON",
+			"logging":     "Logging",
+			"utils":       "Utils",
+		},
+		Libraries: map[string]*LibraryInfo{
+			"kotlin-stdlib": {
+				Name:        "Kotlin Standard Library",
+				Group:       "org.jetbrains.kotlin",
+				Artifact:    "kotlin-stdlib",
+				Version:     "1.9.24",
+				Jar:         "kotlin-stdlib-1.9.24.jar",
+				URL:         "https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/1.9.24/kotlin-stdlib-1.9.24.jar",
+				Category:    "kotlin",
+				Description: "Kotlin standard library with core utilities and collections",
+			},
+			"kotlinx-coroutines-core": {
+				Name:         "KotlinX Coroutines Core",
+				Group:        "org.jetbrains.kotlinx",
+				Artifact:     "kotlinx-coroutines-core",
+				Version:      "1.8.1",
+				Jar:          "kotlinx-coroutines-core-1.8.1.jar",
+				URL:          "https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core/1.8.1/kotlinx-coroutines-core-1.8.1.jar",
+				Category:     "kotlinx",
+				Description:  "Kotlin coroutines core library for async programming",
+				Dependencies: []string{"kotlin-stdlib"},
+			},
+			"kotlinx-coroutines-android": {
+				Name:         "KotlinX Coroutines Android",
+				Group:        "org.jetbrains.kotlinx",
+				Artifact:     "kotlinx-coroutines-android",
+				Version:      "1.8.1",
+				Jar:          "kotlinx-coroutines-android-1.8.1.jar",
+				URL:          "https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-android/1.8.1/kotlinx-coroutines-android-1.8.1.jar",
+				Category:     "kotlinx",
+				Description:  "Kotlin coroutines Android dispatcher (Main thread)",
+				Dependencies: []string{"kotlinx-coroutines-core"},
+			},
+			"kotlinx-serialization-core": {
+				Name:         "KotlinX Serialization Core",
+				Group:        "org.jetbrains.kotlinx",
+				Artifact:     "kotlinx-serialization-core",
+				Version:      "1.6.3",
+				Jar:          "kotlinx-serialization-core-1.6.3.jar",
+				URL:          "https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-core/1.6.3/kotlinx-serialization-core-1.6.3.jar",
+				Category:     "kotlinx",
+				Description:  "Kotlin multiplatform serialization framework",
+				Dependencies: []string{"kotlin-stdlib"},
+			},
+			"okhttp3": {
+				Name:        "OkHttp 3",
+				Group:       "com.squareup.okhttp3",
+				Artifact:    "okhttp3",
+				Version:     "4.12.0",
+				Jar:         "okhttp-4.12.0.jar",
+				URL:         "https://repo1.maven.org/maven2/com/squareup/okhttp3/okhttp/4.12.0/okhttp-4.12.0.jar",
+				Category:    "networking",
+				Description: "HTTP/HTTPS client for Android with connection pooling",
+			},
+			"okhttp3-logging": {
+				Name:         "OkHttp 3 Logging Interceptor",
+				Group:        "com.squareup.okhttp3",
+				Artifact:     "okhttp3-logging",
+				Version:      "4.12.0",
+				Jar:          "logging-interceptor-4.12.0.jar",
+				URL:          "https://repo1.maven.org/maven2/com/squareup/okhttp3/logging-interceptor/4.12.0/logging-interceptor-4.12.0.jar",
+				Category:     "networking",
+				Description:  "OkHttp logging interceptor for request/response logging",
+				Dependencies: []string{"okhttp3"},
+			},
+			"retrofit2": {
+				Name:         "Retrofit 2",
+				Group:        "com.squareup.retrofit2",
+				Artifact:     "retrofit2",
+				Version:      "2.11.0",
+				Jar:          "retrofit-2.11.0.jar",
+				URL:          "https://repo1.maven.org/maven2/com/squareup/retrofit2/retrofit/2.11.0/retrofit-2.11.0.jar",
+				Category:     "networking",
+				Description:  "Type-safe HTTP client for Android and Java",
+				Dependencies: []string{"okhttp3"},
+			},
+			"retrofit2-gson": {
+				Name:         "Retrofit 2 Gson Converter",
+				Group:        "com.squareup.retrofit2",
+				Artifact:     "retrofit2-gson",
+				Version:      "2.11.0",
+				Jar:          "converter-gson-2.11.0.jar",
+				URL:          "https://repo1.maven.org/maven2/com/squareup/retrofit2/converter-gson/2.11.0/converter-gson-2.11.0.jar",
+				Category:     "networking",
+				Description:  "Retrofit Gson converter for JSON serialization",
+				Dependencies: []string{"retrofit2", "gson"},
+			},
+			"gson": {
+				Name:        "Gson",
+				Group:       "com.google.code.gson",
+				Artifact:    "gson",
+				Version:     "2.11.0",
+				Jar:         "gson-2.11.0.jar",
+				URL:         "https://repo1.maven.org/maven2/com/google/code/gson/gson/2.11.0/gson-2.11.0.jar",
+				Category:    "json",
+				Description: "Google JSON library for Java object serialization",
+			},
+			"jackson-databind": {
+				Name:        "Jackson Databind",
+				Group:       "com.fasterxml.jackson.core",
+				Artifact:    "jackson-databind",
+				Version:     "2.17.2",
+				Jar:         "jackson-databind-2.17.2.jar",
+				URL:         "https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.17.2/jackson-databind-2.17.2.jar",
+				Category:    "json",
+				Description: "Jackson JSON data binding library",
+			},
+			"slf4j-api": {
+				Name:        "SLF4J API",
+				Group:       "org.slf4j",
+				Artifact:    "slf4j-api",
+				Version:     "2.0.13",
+				Jar:         "slf4j-api-2.0.13.jar",
+				URL:         "https://repo1.maven.org/maven2/org/slf4j/slf4j-api/2.0.13/slf4j-api-2.0.13.jar",
+				Category:    "logging",
+				Description: "Simple Logging Facade for Java",
+			},
+			"logback-classic": {
+				Name:         "Logback Classic",
+				Group:        "ch.qos.logback",
+				Artifact:     "logback-classic",
+				Version:      "1.5.6",
+				Jar:          "logback-classic-1.5.6.jar",
+				URL:          "https://repo1.maven.org/maven2/ch/qos/logback/logback-classic/1.5.6/logback-classic-1.5.6.jar",
+				Category:     "logging",
+				Description:  "Logback classic logging implementation (SLF4J binding)",
+				Dependencies: []string{"slf4j-api"},
+			},
+			"guava": {
+				Name:        "Guava",
+				Group:       "com.google.guava",
+				Artifact:    "guava",
+				Version:     "33.2.1-jre",
+				Jar:         "guava-33.2.1-jre.jar",
+				URL:         "https://repo1.maven.org/maven2/com/google/guava/guava/33.2.1-jre/guava-33.2.1-jre.jar",
+				Category:    "utils",
+				Description: "Google core libraries for Java (collections, caching, primitives)",
+			},
+			"apache-commons-lang3": {
+				Name:        "Apache Commons Lang 3",
+				Group:       "org.apache.commons",
+				Artifact:    "apache-commons-lang3",
+				Version:     "3.14.0",
+				Jar:         "commons-lang3-3.14.0.jar",
+				URL:         "https://repo1.maven.org/maven2/org/apache/commons/commons-lang3/3.14.0/commons-lang3-3.14.0.jar",
+				Category:    "utils",
+				Description: "Apache Commons Lang utility library (string, math, concurrency)",
+			},
+		},
+	}
 }
 
 func (m *LibraryManager) ListLibraries() error {
@@ -151,11 +338,11 @@ func (m *LibraryManager) InstallLibrary(ctx context.Context, artifact string) er
 		return fmt.Errorf("library '%s' not found. Use 'tamk libs list' to see available libraries", artifact)
 	}
 
-	logger.Info("Installing library", "name", lib.Name, "version", lib.Version)
+	logger.Info(fmt.Sprintf("Installing library %s %s", lib.Name, lib.Version))
 
 	for _, dep := range lib.Dependencies {
 		if !m.isInstalled(dep) {
-			logger.Info("Installing dependency", "name", dep)
+			logger.Info(fmt.Sprintf("Installing dependency %s", dep))
 			if err := m.InstallLibrary(ctx, dep); err != nil {
 				return fmt.Errorf("failed to install dependency %s: %w", dep, err)
 			}
@@ -169,16 +356,16 @@ func (m *LibraryManager) InstallLibrary(ctx context.Context, artifact string) er
 
 	jarPath := filepath.Join(installDir, lib.Jar)
 	if _, err := os.Stat(jarPath); err == nil {
-		logger.Info("Library already installed", "path", jarPath)
+		logger.Info(fmt.Sprintf("Library already installed at %s", jarPath))
 		return nil
 	}
 
-	logger.Step("Downloading", "url", lib.URL)
+	logger.Step(fmt.Sprintf("Downloading from %s", lib.URL))
 	if err := m.downloadFile(ctx, lib.URL, jarPath); err != nil {
 		return fmt.Errorf("failed to download library: %w", err)
 	}
 
-	logger.Success("Installed", "library", lib.Name, "path", jarPath)
+	logger.Success(fmt.Sprintf("Installed %s at %s", lib.Name, jarPath))
 	return nil
 }
 
@@ -201,7 +388,7 @@ func (m *LibraryManager) RemoveLibrary(artifact string) error {
 		return fmt.Errorf("failed to remove library: %w", err)
 	}
 
-	logger.Success("Removed", "library", lib.Name)
+	logger.Success(fmt.Sprintf("Removed library %s", lib.Name))
 	return nil
 }
 
