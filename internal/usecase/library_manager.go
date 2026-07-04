@@ -107,12 +107,12 @@ func defaultLibraryRegistry() *LibraryRegistry {
 	return &LibraryRegistry{
 		Version: "1.0.0",
 		Categories: map[string]string{
-			"kotlin":      "Kotlin",
-			"kotlinx":     "KotlinX",
-			"networking":  "Networking",
-			"json":        "JSON",
-			"logging":     "Logging",
-			"utils":       "Utils",
+			"kotlin":     "Kotlin",
+			"kotlinx":    "KotlinX",
+			"networking": "Networking",
+			"json":       "JSON",
+			"logging":    "Logging",
+			"utils":      "Utils",
 		},
 		Libraries: map[string]*LibraryInfo{
 			"kotlin-stdlib": {

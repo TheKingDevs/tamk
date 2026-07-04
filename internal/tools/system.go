@@ -156,6 +156,28 @@ func (m *systemToolManager) D8(_ context.Context) (string, error) {
 	return p, nil
 }
 
+func (m *systemToolManager) R8(_ context.Context) (string, error) {
+	if p, ok := m.cache.Get("r8"); ok {
+		return p, nil
+	}
+
+	p, err := findTool("r8")
+	if err != nil {
+		jar, jarErr := findTool("r8.jar")
+		if jarErr != nil {
+			return "", fmt.Errorf("r8 not found: install Android SDK build-tools: %w", err)
+		}
+		java, javaErr := findTool("java")
+		if javaErr != nil {
+			return "", fmt.Errorf("r8.jar found but java not available: %w", javaErr)
+		}
+		p = fmt.Sprintf("%s -jar %s", java, jar)
+	}
+
+	m.cache.Set("r8", p)
+	return p, nil
+}
+
 func (m *systemToolManager) KotlinCompiler(_ context.Context) (string, error) {
 	if p, ok := m.cache.Get("kotlinc"); ok {
 		return p, nil

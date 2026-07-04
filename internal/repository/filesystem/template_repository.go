@@ -110,7 +110,7 @@ func (r *TemplateRepository) GetMappings(ctx context.Context, projectType string
 	case "webapp":
 		return r.getWebAppMappings(isInternal), nil
 	case "ui_apk":
-		return r.getUIAPKMappings(), nil
+		return r.getUIAPKMappings(isInternal), nil
 	case "console":
 		return r.getConsoleMappings(), nil
 	default:
@@ -140,7 +140,17 @@ func (r *TemplateRepository) getWebAppMappings(internal bool) []entity.TemplateM
 	return mappings
 }
 
-func (r *TemplateRepository) getUIAPKMappings() []entity.TemplateMapping {
+func (r *TemplateRepository) getUIAPKMappings(compose bool) []entity.TemplateMapping {
+	if compose {
+		return []entity.TemplateMapping{
+			{Dest: "AndroidManifest.xml", Template: "xml/AndroidManifestCompose.xml.tmpl"},
+			{Dest: "res/values/strings.xml", Template: "xml/strings.xml.tmpl"},
+			{Dest: "res/values/styles.xml", Template: "xml/styles_compose.xml.tmpl"},
+			{Dest: "res/mipmap/ic_launcher.xml", Template: "xml/icon.xml.tmpl"},
+			{Dest: "res/mipmap/ic_launcher_round.xml", Template: "xml/icon.xml.tmpl"},
+			{Dest: "src/main/kotlin/", Template: "kotlin/MainActivityCompose.kt.tmpl"},
+		}
+	}
 	return []entity.TemplateMapping{
 		{Dest: "AndroidManifest.xml", Template: "xml/AndroidManifest.xml.tmpl"},
 		{Dest: "res/layout/activity_main.xml", Template: "xml/activity_main.xml.tmpl"},

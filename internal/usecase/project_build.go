@@ -126,6 +126,7 @@ type BuildInput struct {
 	Password    string
 	Targets     []entity.BuildTarget
 	Guardian    bool // Enable Guardian security protection
+	Optimize    bool // Use R8 instead of D8 for optimized DEX output
 }
 
 func (uc *BuildProjectUseCase) FullBuild(ctx context.Context, input BuildInput) (*entity.BuildResult, error) {
@@ -317,6 +318,14 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 		return failedResult(entity.BuildPhaseD8, err.Error())
 	}
 
+	var r8Path string
+	if input.Optimize {
+		r8Path, err = uc.tools.R8(ctx)
+		if err != nil {
+			return failedResult(entity.BuildPhaseR8, err.Error())
+		}
+	}
+
 	apksignerPath, err := uc.tools.ApkSigner(ctx)
 	if err != nil {
 		return failedResult(entity.BuildPhaseApkSign, err.Error())
@@ -346,7 +355,7 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 
 	// Build APK target
 	if wantAPK {
-		r := uc.buildAPK(ctx, project, input, aapt2Path, kotlincPath, d8Path, apksignerPath, sdkPath, resZip, assetsDir, kotlinDir)
+		r := uc.buildAPK(ctx, project, input, aapt2Path, kotlincPath, d8Path, r8Path, apksignerPath, sdkPath, resZip, assetsDir, kotlinDir)
 		if !r.Success {
 			return r
 		}
@@ -355,7 +364,7 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 
 	// Build AAB target
 	if wantAAB {
-		r := uc.buildAAB(ctx, project, input, aapt2Path, kotlincPath, d8Path, apksignerPath, sdkPath, resZip, assetsDir, kotlinDir)
+		r := uc.buildAAB(ctx, project, input, aapt2Path, kotlincPath, d8Path, r8Path, apksignerPath, sdkPath, resZip, assetsDir, kotlinDir)
 		if !r.Success {
 			return r
 		}
@@ -376,7 +385,7 @@ func (uc *BuildProjectUseCase) executeBuild(ctx context.Context, project *entity
 
 func (uc *BuildProjectUseCase) buildAPK(
 	ctx context.Context, project *entity.Project, input BuildInput,
-	aapt2Path, kotlincPath, d8Path, apksignerPath, sdkPath,
+	aapt2Path, kotlincPath, d8Path, r8Path, apksignerPath, sdkPath,
 	resZip, assetsDir, kotlinDir string,
 ) *entity.BuildResult {
 	projPath := input.ProjectPath
@@ -409,7 +418,7 @@ func (uc *BuildProjectUseCase) buildAPK(
 		return failedResult(entity.BuildPhaseAAPT2Link, string(out))
 	}
 
-	r := uc.compileAndDex(ctx, project, projPath, kotlincPath, d8Path, sdkPath, objDir, genDir, kotlinDir)
+	r := uc.compileAndDex(ctx, project, projPath, kotlincPath, d8Path, r8Path, sdkPath, objDir, genDir, kotlinDir, input.Optimize)
 	if !r.Success {
 		return r
 	}
@@ -456,7 +465,7 @@ func (uc *BuildProjectUseCase) buildAPK(
 
 func (uc *BuildProjectUseCase) buildAAB(
 	ctx context.Context, project *entity.Project, input BuildInput,
-	aapt2Path, kotlincPath, d8Path, apksignerPath, sdkPath,
+	aapt2Path, kotlincPath, d8Path, r8Path, apksignerPath, sdkPath,
 	resZip, assetsDir, kotlinDir string,
 ) *entity.BuildResult {
 	projPath := input.ProjectPath
@@ -486,7 +495,7 @@ func (uc *BuildProjectUseCase) buildAAB(
 		return failedResult(entity.BuildPhaseAAPT2Link, string(out))
 	}
 
-	r := uc.compileAndDex(ctx, project, projPath, kotlincPath, d8Path, sdkPath, objDir, genDir, kotlinDir)
+	r := uc.compileAndDex(ctx, project, projPath, kotlincPath, d8Path, r8Path, sdkPath, objDir, genDir, kotlinDir, input.Optimize)
 	if !r.Success {
 		return r
 	}
@@ -582,9 +591,11 @@ func (uc *BuildProjectUseCase) buildAAB(
 }
 
 // compileAndDex compiles Kotlin sources and converts to DEX. Shared between APK and AAB builds.
+// When optimize is true, uses R8 instead of D8 for optimized DEX output.
 func (uc *BuildProjectUseCase) compileAndDex(
 	ctx context.Context, project *entity.Project, projPath,
-	kotlincPath, d8Path, sdkPath, objDir, genDir, kotlinDir string,
+	kotlincPath, d8Path, r8Path, sdkPath, objDir, genDir, kotlinDir string,
+	optimize bool,
 ) *entity.BuildResult {
 	logger.Step("Compiling Kotlin sources...")
 	os.MkdirAll(objDir, 0o755)
@@ -616,7 +627,6 @@ func (uc *BuildProjectUseCase) compileAndDex(
 		}
 	}
 
-	logger.Step("Converting to DEX (D8)...")
 	var classFiles []string
 	filepath.Walk(objDir, func(path string, info os.FileInfo, err error) error {
 		if err == nil && !info.IsDir() && strings.HasSuffix(path, ".class") {
@@ -625,19 +635,44 @@ func (uc *BuildProjectUseCase) compileAndDex(
 		return nil
 	})
 	if len(classFiles) == 0 {
-		return failedResult(entity.BuildPhaseD8, "no .class files found in "+objDir)
+		phase := entity.BuildPhaseD8
+		if optimize {
+			phase = entity.BuildPhaseR8
+		}
+		return failedResult(phase, "no .class files found in "+objDir)
 	}
 
-	args := []string{"--lib", sdkPath, "--release", "--output", projPath}
-	if libCP, err := libMgr.GetClasspath(); err == nil && libCP != "" {
-		for _, jar := range strings.Split(libCP, string(os.PathListSeparator)) {
-			args = append(args, "--lib", jar)
+	if optimize {
+		logger.Step("Converting to DEX (R8)...")
+		minSdk := extractMinSdkVersion(filepath.Join(projPath, "AndroidManifest.xml"))
+
+		args := []string{"--lib", sdkPath, "--release", "--output", projPath, "--min-api", minSdk}
+		if libCP, err := libMgr.GetClasspath(); err == nil && libCP != "" {
+			for _, jar := range strings.Split(libCP, string(os.PathListSeparator)) {
+				args = append(args, "--lib", jar)
+			}
 		}
-	}
-	args = append(args, classFiles...)
-	d8Cmd := exec.CommandContext(ctx, d8Path, args...)
-	if out, err := uc.executeOutput(d8Cmd); err != nil {
-		return failedResult(entity.BuildPhaseD8, string(out))
+		args = append(args, classFiles...)
+
+		r8Args := strings.Fields(r8Path)
+		r8Args = append(r8Args, args...)
+		r8Cmd := exec.CommandContext(ctx, r8Args[0], r8Args[1:]...)
+		if out, err := uc.executeOutput(r8Cmd); err != nil {
+			return failedResult(entity.BuildPhaseR8, string(out))
+		}
+	} else {
+		logger.Step("Converting to DEX (D8)...")
+		args := []string{"--lib", sdkPath, "--release", "--output", projPath}
+		if libCP, err := libMgr.GetClasspath(); err == nil && libCP != "" {
+			for _, jar := range strings.Split(libCP, string(os.PathListSeparator)) {
+				args = append(args, "--lib", jar)
+			}
+		}
+		args = append(args, classFiles...)
+		d8Cmd := exec.CommandContext(ctx, d8Path, args...)
+		if out, err := uc.executeOutput(d8Cmd); err != nil {
+			return failedResult(entity.BuildPhaseD8, string(out))
+		}
 	}
 
 	return &entity.BuildResult{Success: true}

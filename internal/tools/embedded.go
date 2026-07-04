@@ -376,6 +376,43 @@ func (m *embeddedToolManager) D8(_ context.Context) (string, error) {
 	return p, nil
 }
 
+func (m *embeddedToolManager) R8(_ context.Context) (string, error) {
+	if p, ok := m.cache.Get("r8"); ok {
+		return p, nil
+	}
+
+	if !m.IsSetup() {
+		if err := m.Setup(); err != nil {
+			return "", err
+		}
+	}
+
+	r8Dir := m.toolsDir
+	r8Jar := filepath.Join(r8Dir, "r8.jar")
+	if _, err := os.Stat(r8Jar); os.IsNotExist(err) {
+		// Download R8 from Maven Central
+		r8URL := "https://storage.googleapis.com/r8-releases/raw/main/com/android/tools/r8/r8/8.2.24/r8-8.2.24.jar"
+		logger.Info("Downloading R8...")
+		cmd := exec.CommandContext(ctx, "curl", "-sL", "-o", r8Jar, r8URL)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return "", fmt.Errorf("failed to download R8: %s: %w", string(out), err)
+		}
+		logger.Info("R8 downloaded successfully")
+	}
+
+	javaPath, err := findTool("java.exe")
+	if err != nil {
+		javaPath, err = findTool("java")
+		if err != nil {
+			return "", fmt.Errorf("R8 requires Java: %w", err)
+		}
+	}
+
+	p := fmt.Sprintf("%s -jar %s", javaPath, r8Jar)
+	m.cache.Set("r8", p)
+	return p, nil
+}
+
 func (m *embeddedToolManager) KotlinCompiler(_ context.Context) (string, error) {
 	if p, ok := m.cache.Get("kotlinc"); ok {
 		return p, nil

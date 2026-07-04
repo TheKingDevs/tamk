@@ -10,6 +10,7 @@ func TestBuildPhase_Values(t *testing.T) {
 		BuildPhaseAAPT2Link,
 		BuildPhaseKotlinCompile,
 		BuildPhaseD8,
+		BuildPhaseR8,
 		BuildPhasePackageDEX,
 		BuildPhaseZipalign,
 		BuildPhaseApkSign,

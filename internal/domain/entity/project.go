@@ -15,6 +15,13 @@ const (
 	WebContentExternal WebContentMode = "external"
 )
 
+type UIFramework string
+
+const (
+	UIFrameworkXML     UIFramework = "xml"
+	UIFrameworkCompose UIFramework = "compose"
+)
+
 type Project struct {
 	Name        string
 	Type        ProjectType
@@ -24,6 +31,7 @@ type Project struct {
 
 	WebURL       string
 	WebMode      WebContentMode
+	UIFramework  UIFramework
 	KeystorePath string
 
 	MinSDK    int

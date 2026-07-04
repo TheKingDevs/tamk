@@ -34,13 +34,14 @@ func NewCreateProjectUseCase(
 }
 
 type CreateProjectInput struct {
-	Name     string
-	Type     entity.ProjectType
-	Version  string
-	Author   string
-	Password string
-	WebURL   string
-	WebMode  entity.WebContentMode
+	Name        string
+	Type        entity.ProjectType
+	Version     string
+	Author      string
+	Password    string
+	WebURL      string
+	WebMode     entity.WebContentMode
+	UIFramework entity.UIFramework
 }
 
 type CreateProjectOutput struct {
@@ -65,6 +66,7 @@ func (uc *CreateProjectUseCase) Execute(ctx context.Context, input CreateProject
 		PackageName: packageName,
 		WebURL:      input.WebURL,
 		WebMode:     input.WebMode,
+		UIFramework: input.UIFramework,
 		MinSDK:      21,
 		TargetSDK:   30,
 	}
@@ -143,6 +145,11 @@ func (uc *CreateProjectUseCase) createWebAppStructure(ctx context.Context, proje
 }
 
 func (uc *CreateProjectUseCase) createUIAPKStructure(ctx context.Context, project *entity.Project, projectPath string, input CreateProjectInput) error {
+	uf := input.UIFramework
+	if uf == "" {
+		uf = entity.UIFrameworkXML
+	}
+
 	dirs := []string{
 		"secret",
 		"res/layout",
@@ -159,7 +166,7 @@ func (uc *CreateProjectUseCase) createUIAPKStructure(ctx context.Context, projec
 
 	placeholders := uc.makePlaceholders(project, input)
 
-	mappings, err := uc.tmplRepo.GetMappings(ctx, "ui_apk", false)
+	mappings, err := uc.tmplRepo.GetMappings(ctx, "ui_apk", uf == entity.UIFrameworkCompose)
 	if err != nil {
 		return err
 	}

@@ -24,6 +24,7 @@ var (
 	verbose  bool
 	password string
 	guardian bool
+	optimize bool
 )
 
 func NewRootCmd() *cobra.Command {
@@ -59,6 +60,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "V", false, "Debug-level logging")
 	cmd.PersistentFlags().StringVarP(&password, "password", "p", "", "Keystore password")
 	cmd.PersistentFlags().BoolVar(&guardian, "guardian", false, "Enable Guardian security protection")
+	cmd.PersistentFlags().BoolVar(&optimize, "optimize", false, "Use R8 for optimized DEX output (replaces D8)")
 
 	cmd.AddCommand(newCreateCmd(createUC))
 	cmd.AddCommand(newBuildCmd(buildUC, projRepo))
@@ -76,12 +78,13 @@ func NewRootCmd() *cobra.Command {
 
 func newCreateCmd(uc *usecase.CreateProjectUseCase) *cobra.Command {
 	var (
-		name    string
-		projType string
-		version string
-		author  string
-		webURL  string
-		webMode string
+		name      string
+		projType  string
+		version   string
+		author    string
+		webURL    string
+		webMode   string
+		framework string
 	)
 
 	cmd := &cobra.Command{
@@ -90,7 +93,7 @@ func newCreateCmd(uc *usecase.CreateProjectUseCase) *cobra.Command {
 		Long:  `Create a new T.A.M.K project. Run without flags for interactive wizard.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if name != "" && projType != "" && version != "" && author != "" {
-				return createProjectFromFlags(context.Background(), uc, name, projType, version, author, webURL, webMode)
+				return createProjectFromFlags(context.Background(), uc, name, projType, version, author, webURL, webMode, framework)
 			}
 			return createProjectInteractive(context.Background(), uc)
 		},
@@ -102,6 +105,7 @@ func newCreateCmd(uc *usecase.CreateProjectUseCase) *cobra.Command {
 	cmd.Flags().StringVarP(&author, "author", "a", "Developer", "Author name")
 	cmd.Flags().StringVar(&webURL, "url", "file:///android_asset/index.html", "WebApp URL (for webapp type)")
 	cmd.Flags().StringVar(&webMode, "web-mode", "internal", "Web content mode: internal, external")
+	cmd.Flags().StringVar(&framework, "framework", "xml", "UI framework: xml, compose")
 
 	return cmd
 }
@@ -135,6 +139,7 @@ func newBuildCmd(uc *usecase.BuildProjectUseCase, projRepo *repoFS.ProjectReposi
 				Password:    pwd,
 				Targets:     targets,
 				Guardian:    guardian,
+				Optimize:    optimize,
 			})
 			if err != nil {
 				return err

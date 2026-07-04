@@ -38,6 +38,9 @@ type ToolManager interface {
 	// D8 returns path to the d8.jar or d8 binary.
 	D8(ctx context.Context) (string, error)
 
+	// R8 returns path to the r8.jar binary (for optimized builds).
+	R8(ctx context.Context) (string, error)
+
 	// KotlinCompiler returns path to the kotlinc script or binary.
 	KotlinCompiler(ctx context.Context) (string, error)
 

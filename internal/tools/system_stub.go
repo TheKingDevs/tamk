@@ -49,6 +49,10 @@ func (m *stubSystemManager) D8(_ context.Context) (string, error) {
 	return "", fmt.Errorf("system tools not available on Windows; use embedded tools")
 }
 
+func (m *stubSystemManager) R8(_ context.Context) (string, error) {
+	return "", fmt.Errorf("system tools not available on Windows; use embedded tools")
+}
+
 func (m *stubSystemManager) KotlinCompiler(_ context.Context) (string, error) {
 	return "", fmt.Errorf("system tools not available on Windows; use embedded tools")
 }

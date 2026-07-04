@@ -49,6 +49,10 @@ func (m *stubEmbeddedManager) D8(_ context.Context) (string, error) {
 	return "", fmt.Errorf("embedded tools not available on %s", runtime.GOOS)
 }
 
+func (m *stubEmbeddedManager) R8(_ context.Context) (string, error) {
+	return "", fmt.Errorf("embedded tools not available on %s", runtime.GOOS)
+}
+
 func (m *stubEmbeddedManager) KotlinCompiler(_ context.Context) (string, error) {
 	return "", fmt.Errorf("embedded tools not available on %s", runtime.GOOS)
 }

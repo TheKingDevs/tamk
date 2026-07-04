@@ -7,6 +7,7 @@ const (
 	BuildPhaseAAPT2Link     BuildPhase = "aapt2_link"
 	BuildPhaseKotlinCompile BuildPhase = "kotlin_compile"
 	BuildPhaseD8            BuildPhase = "d8"
+	BuildPhaseR8            BuildPhase = "r8"
 	BuildPhasePackageDEX    BuildPhase = "package_dex"
 	BuildPhaseZipalign      BuildPhase = "zipalign"
 	BuildPhaseApkSign       BuildPhase = "apk_sign"

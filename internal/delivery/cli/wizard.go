@@ -198,6 +198,22 @@ func createProjectInteractive(ctx context.Context, uc *usecase.CreateProjectUseC
 		projType = entity.ProjectTypeUIAPK
 	}
 
+	var uiFw entity.UIFramework
+	if projType == entity.ProjectTypeUIAPK {
+		fmt.Println()
+		fmt.Println("  " + logger.AnsiBold + logger.AnsiYellow + "UI FRAMEWORK" + logger.AnsiReset)
+		fmt.Println()
+		fmt.Printf("  %s[1]%s XML Layouts (standard)\n", logger.AnsiCyan, logger.AnsiReset)
+		fmt.Printf("  %s[2]%s Jetpack Compose\n\n", logger.AnsiPurple, logger.AnsiReset)
+
+		fw := ask("Framework", "1")
+		if strings.TrimSpace(fw) == "2" {
+			uiFw = entity.UIFrameworkCompose
+		} else {
+			uiFw = entity.UIFrameworkXML
+		}
+	}
+
 	webURL = "file:///android_asset/index.html"
 	if projType == entity.ProjectTypeWebApp {
 		fmt.Println()
@@ -236,13 +252,14 @@ func createProjectInteractive(ctx context.Context, uc *usecase.CreateProjectUseC
 	}
 
 	output, err := uc.Execute(ctx, usecase.CreateProjectInput{
-		Name:     name,
-		Type:     projType,
-		Version:  version,
-		Author:   author,
-		Password: pwd,
-		WebURL:   webURL,
-		WebMode:  webMode,
+		Name:        name,
+		Type:        projType,
+		Version:     version,
+		Author:      author,
+		Password:    pwd,
+		WebURL:      webURL,
+		WebMode:     webMode,
+		UIFramework: uiFw,
 	})
 	if err != nil {
 		return err
@@ -253,7 +270,7 @@ func createProjectInteractive(ctx context.Context, uc *usecase.CreateProjectUseC
 	return nil
 }
 
-func createProjectFromFlags(ctx context.Context, uc *usecase.CreateProjectUseCase, name, projTypeStr, version, author, webURL, webModeStr string) error {
+func createProjectFromFlags(ctx context.Context, uc *usecase.CreateProjectUseCase, name, projTypeStr, version, author, webURL, webModeStr, framework string) error {
 	var projType entity.ProjectType
 	switch projTypeStr {
 	case "console":
@@ -271,6 +288,16 @@ func createProjectFromFlags(ctx context.Context, uc *usecase.CreateProjectUseCas
 		webMode = entity.WebContentInternal
 	}
 
+	var uiFw entity.UIFramework
+	if projType == entity.ProjectTypeUIAPK {
+		switch framework {
+		case "compose":
+			uiFw = entity.UIFrameworkCompose
+		default:
+			uiFw = entity.UIFrameworkXML
+		}
+	}
+
 	if projType == entity.ProjectTypeWebApp && webMode == entity.WebContentInternal {
 		webURL = "file:///android_asset/index.html"
 	}
@@ -281,13 +308,14 @@ func createProjectFromFlags(ctx context.Context, uc *usecase.CreateProjectUseCas
 	}
 
 	output, err := uc.Execute(ctx, usecase.CreateProjectInput{
-		Name:     name,
-		Type:     projType,
-		Version:  version,
-		Author:   author,
-		Password: pwd,
-		WebURL:   webURL,
-		WebMode:  webMode,
+		Name:        name,
+		Type:        projType,
+		Version:     version,
+		Author:      author,
+		Password:    pwd,
+		WebURL:      webURL,
+		WebMode:     webMode,
+		UIFramework: uiFw,
 	})
 	if err != nil {
 		return err

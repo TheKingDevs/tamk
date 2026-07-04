@@ -824,7 +824,8 @@ RASPSecurityModule.start(context, 5000L) { threat ->
 ## AGENT BEST PRACTICES
 
 1. **Always read** `./AGENTS.md` first for context.
-2. **Always read** `.agents/memory/MEMORY.md` for project memory before starting work.
+2. **Language Convention** — All communication with the user (text, questions, todowrite, etc.) MUST be in **Portuguese (pt-BR)**. Code, comments, commit messages, variables, and documentation MUST be in **English**. Never mix languages — code stays English, conversation stays Portuguese.
+3. **Always read** `.agents/memory/MEMORY.md` for project memory before starting work.
 3. **Check existing docs** in `documentation/` before creating new files.
 4. **Preserve template structure** when modifying `.tmpl` files.
 5. **Test changes** with `go test ./...` and `make build`.
